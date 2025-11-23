@@ -339,6 +339,8 @@
                 }
             } else {
                 result = await Authentication.registerMerchant(data);
+                console.log(result);
+
                 if (result.success) {
                     // Redirect to Categories page
                     // Pass userId if needed? 
