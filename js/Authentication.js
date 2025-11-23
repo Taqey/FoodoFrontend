@@ -352,17 +352,16 @@ const Authentication = {
     // --- UI Helpers ---
     updateHeader: () => {
         const isLoggedIn = Authentication.isAuthenticated();
-        const loginBtn = document.querySelector('a[href*="Login"]');
-        const registerBtn = document.querySelector('a[href*="Register"]');
+
         const profileDropdown = document.getElementById('drop');
 
         if (isLoggedIn) {
-            if (loginBtn) loginBtn.classList.add('d-none');
-            if (registerBtn) registerBtn.classList.add('d-none');
+            document.querySelectorAll('a[href*="Login"]').forEach(el => el.classList.add('d-none'));
+            document.querySelectorAll('a[href*="Register"]').forEach(el => el.classList.add('d-none'));
             if (profileDropdown) profileDropdown.classList.remove('d-none');
         } else {
-            if (loginBtn) loginBtn.classList.remove('d-none');
-            if (registerBtn) registerBtn.classList.remove('d-none');
+            document.querySelectorAll('a[href*="Login"]').forEach(el => el.classList.remove('d-none'));
+            document.querySelectorAll('a[href*="Register"]').forEach(el => el.classList.remove('d-none'));
             if (profileDropdown) profileDropdown.classList.add('d-none');
         }
 
