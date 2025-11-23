@@ -75,7 +75,7 @@ const Authentication = {
         const role = Authentication.getUserRole();
         if (role !== requiredRole) {
             alert('Access Denied – Only merchants are allowed to view this page.');
-            window.location.href = 'Main.html';
+            window.location.href = 'index.html';
         }
     },
 
