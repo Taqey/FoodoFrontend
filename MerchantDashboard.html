@@ -413,6 +413,7 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             Authentication.requireRole('Merchant');
+            Authentication.updateHeader();
 
             // Initialize Bootstrap modals
             productModal = new bootstrap.Modal(document.getElementById('productModal'));
