@@ -13,9 +13,23 @@ const Authentication = {
     },
 
     clearToken: () => {
-        localStorage.removeItem('accessToken');
-        sessionStorage.removeItem('accessToken');
+        const keysToRemove = [
+            'accessToken', 
+            'tempUserId', 
+            'Auth', 
+            'jwt_token', 
+            'jwt_token_expiry', 
+            'token_storage_type'
+        ];
+        
+        keysToRemove.forEach(key => {
+            localStorage.removeItem(key);
+            sessionStorage.removeItem(key);
+        });
+
+        // Clear cookies with all possible path/secure variations to ensure deletion
         document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
     },
 
     isAuthenticated: () => !!Authentication.getToken(),
@@ -37,6 +51,16 @@ const Authentication = {
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
             return payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || payload.nameid || payload.sub;
+        } catch (e) {
+            return null;
+        }
+    },
+
+    getTokenExpiration: (token) => {
+        if (!token) return null;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.exp * 1000; // Convert to ms
         } catch (e) {
             return null;
         }
@@ -208,10 +232,17 @@ const Authentication = {
     },
 
     refreshToken: async () => {
-        Authentication.showLoading();
+        // Don't show global loading for background refresh to avoid interrupting user
+        // Authentication.showLoading(); 
         try {
             const response = await fetch(`${API_BASE_URL}/refresh-token`, {
                 method: 'POST',
+                // No Authorization header needed as we rely on the cookie now, 
+                // and the backend endpoint allows anonymous access for refresh.
+                // But we can keep it if we have a token, though it might be expired.
+                // Best to omit or send if available. The backend ignores it for auth but might use it for context if valid.
+                // Since we removed [Authorize], we don't strictly need it.
+                // However, to be safe and consistent, let's just send what we have.
                 headers: { 'Authorization': `Bearer ${Authentication.getToken()}` }
             });
 
@@ -225,10 +256,41 @@ const Authentication = {
             }
             return false;
         } catch (error) {
-            Authentication.logout();
+            console.error("Token refresh failed:", error);
             return false;
         } finally {
-            Authentication.hideLoading();
+            // Authentication.hideLoading();
+        }
+    },
+
+    startTokenRefreshTimer: () => {
+        // Check immediately on load
+        Authentication.checkAndRefreshToken();
+        // Then check every 30 seconds
+        setInterval(Authentication.checkAndRefreshToken, 30000);
+    },
+
+    checkAndRefreshToken: async () => {
+        const token = Authentication.getToken();
+        if (!token) return;
+
+        const exp = Authentication.getTokenExpiration(token);
+        if (!exp) return;
+
+        const now = Date.now();
+        const timeUntilExp = exp - now;
+
+        // Refresh if expiring in less than 2 minutes (120000 ms) or already expired
+        if (timeUntilExp < 120000) {
+            console.log('Token expiring soon or expired, refreshing...');
+            const success = await Authentication.refreshToken();
+            if (!success) {
+                // Only alert and logout if we really can't refresh and the token is actually expired
+                if (timeUntilExp <= 0) {
+                    alert('Session expired. Please login again.');
+                    Authentication.logout();
+                }
+            }
         }
     },
 
@@ -283,6 +345,7 @@ const Authentication = {
 
     logout: () => {
         Authentication.clearToken();
+        sessionStorage.removeItem('tempUserId');
         window.location.href = 'Login.html';
     },
 
@@ -315,4 +378,7 @@ const Authentication = {
 
 document.addEventListener('DOMContentLoaded', () => {
     Authentication.updateHeader();
+    if (Authentication.isAuthenticated()) {
+        Authentication.startTokenRefreshTimer();
+    }
 });

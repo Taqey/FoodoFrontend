@@ -148,10 +148,10 @@
                 <a class="nav-link active" href="#" onclick="showTab('products', this)">
                     <i class="ion-ios-list"></i> Products
                 </a>
-                <a class="nav-link" href="#" onclick="showTab('orders', this)">
+                <a class="nav-link" href="#" onclick="showTab('orders', this); loadOrders()">
                     <i class="ion-ios-cart"></i> Orders
                 </a>
-                <a class="nav-link" href="#" onclick="showTab('customers', this)">
+                <a class="nav-link" href="#" onclick="showTab('customers', this); loadCustomers()">
                     <i class="ion-ios-people"></i> Customers
                 </a>
             </nav>
@@ -193,23 +193,61 @@
                 </div>
             </div>
 
-            <!-- Orders (Placeholder) -->
+            <!-- Orders Management -->
             <div id="orders" class="tab-pane">
                 <div class="section-header">
-                    <h3>Orders</h3>
+                    <h3>Order Management</h3>
+                    <button class="btn btn-outline-secondary" onclick="loadOrders()">
+                        <i class="ion-ios-refresh"></i> Refresh
+                    </button>
                 </div>
                 <div class="card p-4">
-                    <p class="text-muted">Order management coming soon.</p>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Order ID</th>
+                                    <th>Customer</th>
+                                    <th>Date</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ordersTableBody">
+                                <!-- Orders will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
-            <!-- Customers (Placeholder) -->
+            <!-- Customers -->
             <div id="customers" class="tab-pane">
                 <div class="section-header">
                     <h3>Customers</h3>
+                    <button class="btn btn-outline-secondary" onclick="loadCustomers()">
+                        <i class="ion-ios-refresh"></i> Refresh
+                    </button>
                 </div>
                 <div class="card p-4">
-                    <p class="text-muted">Customer view coming soon.</p>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Full Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Last Purchased</th>
+                                    <th>Total Orders</th>
+                                    <th>Total Spent</th>
+                                </tr>
+                            </thead>
+                            <tbody id="customersTableBody">
+                                <!-- Customers will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
 
@@ -265,7 +303,71 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save
+                        Product</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Order Details #<span id="orderModalId"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h6>Customer Info</h6>
+                            <p class="mb-1" id="orderCustomerName"></p>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <h6>Order Info</h6>
+                            <p class="mb-1" id="orderDate"></p>
+                            <p class="mb-1 fw-bold" id="orderStatusDisplay"></p>
+                        </div>
+                    </div>
+
+                    <h6>Items</h6>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Price</th>
+                                    <th>Qty</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="orderItemsTableBody"></tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="text-end fw-bold">Total Amount:</td>
+                                    <td class="fw-bold" id="orderTotalAmount"></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+
+                    <div class="border-top pt-3">
+                        <label for="orderStatusSelect" class="form-label">Update Status</label>
+                        <div class="d-flex gap-2">
+                            <select class="form-select" id="orderStatusSelect">
+                                <option value="Pending">Pending</option>
+                                <option value="InProgress">In Progress</option>
+                                <option value="OutForDelivery">Out For Delivery</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="updateOrderStatus()">Update</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -305,12 +407,17 @@
         let deleteModal;
         let productToDeleteId = null;
 
+        // --- Order Management Logic ---
+        let currentOrders = [];
+        let orderModalInstance;
+
         document.addEventListener('DOMContentLoaded', () => {
             Authentication.requireRole('Merchant');
 
             // Initialize Bootstrap modals
             productModal = new bootstrap.Modal(document.getElementById('productModal'));
             deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            orderModalInstance = new bootstrap.Modal(document.getElementById('orderModal'));
 
             loadProducts();
         });
@@ -486,6 +593,145 @@
             } else {
                 alert(result.message || 'Failed to remove attribute');
             }
+        }
+
+        // --- Order Functions ---
+
+        async function loadOrders() {
+            // Fetching first page with large size for simplicity
+            const response = await MerchantService.getAllOrders(1, 50);
+            // Handle potential pagination wrapper
+            const orders = response && response.items ? response.items : (Array.isArray(response) ? response : []);
+            currentOrders = orders;
+            renderOrders(currentOrders);
+        }
+
+        function renderOrders(orders) {
+            const tbody = document.getElementById('ordersTableBody');
+            tbody.innerHTML = '';
+
+            if (!orders || orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No orders found.</td></tr>';
+                return;
+            }
+
+            orders.forEach(o => {
+                const row = document.createElement('tr');
+                // Adjust field names based on actual DTO
+                const orderId = o.id || o.orderId;
+                const customer = o.customerName || 'Customer';
+                const date = new Date(o.orderDate || o.createdOn).toLocaleDateString();
+                const total = o.totalAmount || o.totalPrice;
+                const status = o.status;
+
+                row.innerHTML = `
+                    <td>#${orderId}</td>
+                    <td>${customer}</td>
+                    <td>${date}</td>
+                    <td>$${total}</td>
+                    <td><span class="badge bg-${getStatusBadgeColor(status)}">${status}</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary" onclick="viewOrder('${orderId}')">View</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function getStatusBadgeColor(status) {
+            switch (status) {
+                case 'Pending': return 'warning';
+                case 'InProgress': return 'info';
+                case 'OutForDelivery': return 'primary';
+                case 'Completed': return 'success';
+                case 'Cancelled': return 'danger';
+                default: return 'secondary';
+            }
+        }
+
+        async function viewOrder(id) {
+            const order = await MerchantService.getOrderById(id);
+            if (!order) return;
+
+            const orderId = order.id || order.orderId;
+            const customer = order.customerName || 'Unknown';
+            const date = new Date(order.orderDate || order.createdOn).toLocaleString();
+            const status = order.status;
+            const total = order.totalAmount || order.totalPrice;
+
+            document.getElementById('orderModalId').textContent = orderId;
+            document.getElementById('orderCustomerName').textContent = customer;
+            document.getElementById('orderDate').textContent = date;
+            document.getElementById('orderStatusDisplay').textContent = status;
+            document.getElementById('orderStatusSelect').value = status;
+            document.getElementById('orderTotalAmount').textContent = '$' + total;
+
+            // Render Items
+            const tbody = document.getElementById('orderItemsTableBody');
+            tbody.innerHTML = '';
+            if (order.orderItems) {
+                order.orderItems.forEach(item => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${item.itemName}</td>
+                        <td>$${item.price}</td>
+                        <td>${item.quantity}</td>
+                        <td>$${(item.price * item.quantity).toFixed(2)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            // Store current order ID for update
+            document.getElementById('orderModal').dataset.orderId = orderId;
+
+            orderModalInstance.show();
+        }
+
+        async function updateOrderStatus() {
+            const id = document.getElementById('orderModal').dataset.orderId;
+            const status = document.getElementById('orderStatusSelect').value;
+
+            const result = await MerchantService.updateOrderStatus(id, status);
+
+            if (result.success) {
+                orderModalInstance.hide();
+                loadOrders();
+            } else {
+                alert(result.message || 'Failed to update status');
+            }
+        }
+
+        // --- Customer Functions ---
+
+        async function loadCustomers() {
+            const customers = await MerchantService.getPurchasedCustomers();
+            renderCustomers(customers);
+        }
+
+        function renderCustomers(customers) {
+            const tbody = document.getElementById('customersTableBody');
+            tbody.innerHTML = '';
+
+            if (!customers || customers.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No customers found.</td></tr>';
+                return;
+            }
+
+            customers.forEach(c => {
+                const row = document.createElement('tr');
+                const lastPurchased = new Date(c.lastPurchased).toLocaleDateString();
+
+                row.innerHTML = `
+                    <td>${c.fullName}</td>
+                    <td>${c.email}</td>
+                    <td>${c.phoneNumber}</td>
+                    <td>${lastPurchased}</td>
+                    <td>${c.totalOrders}</td>
+                    <td>$${c.totalSpent.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
         }
     </script>
 

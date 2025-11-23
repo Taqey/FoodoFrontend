@@ -160,5 +160,93 @@ const MerchantService = {
         } finally {
             Authentication.hideLoading();
         }
+    },
+
+    // --- Orders ---
+
+    getAllOrders: async (pageNumber = 1, pageSize = 10) => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${MERCHANT_API_URL}/get-all-orders`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                },
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch orders');
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return null;
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    getOrderById: async (id) => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${MERCHANT_API_URL}/get-order-by-id/${id}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch order');
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return null;
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    updateOrderStatus: async (id, status) => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${MERCHANT_API_URL}/update-order-status/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                },
+                body: JSON.stringify({ Status: status })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to update order status');
+            }
+            return { success: true, message: await response.text() };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    getPurchasedCustomers: async () => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${MERCHANT_API_URL}/get-purchased-customers`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to fetch customers');
+            return await response.json();
+        } catch (error) {
+            console.error(error);
+            return [];
+        } finally {
+            Authentication.hideLoading();
+        }
     }
 };
