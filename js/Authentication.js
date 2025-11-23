@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://foodo.runasp.net/api/authentication';
+const API_BASE_URL = 'https://localhost:7098/api/authentication';
 
 const Authentication = {
     // --- State Management ---
@@ -10,7 +10,6 @@ const Authentication = {
         } else {
             sessionStorage.setItem('accessToken', token);
         }
-        Authentication.updateHeader();
     },
 
     clearToken: () => {
@@ -31,8 +30,6 @@ const Authentication = {
         // Clear cookies with all possible path/secure variations to ensure deletion
         document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
-        
-        Authentication.updateHeader();
     },
 
     isAuthenticated: () => !!Authentication.getToken(),
@@ -78,7 +75,7 @@ const Authentication = {
         const role = Authentication.getUserRole();
         if (role !== requiredRole) {
             alert('Access Denied – Only merchants are allowed to view this page.');
-            window.location.href = 'index.html';
+            window.location.href = 'Main.html';
         }
     },
 
@@ -355,16 +352,17 @@ const Authentication = {
     // --- UI Helpers ---
     updateHeader: () => {
         const isLoggedIn = Authentication.isAuthenticated();
-
+        const loginBtn = document.querySelector('a[href*="Login"]');
+        const registerBtn = document.querySelector('a[href*="Register"]');
         const profileDropdown = document.getElementById('drop');
 
         if (isLoggedIn) {
-            document.querySelectorAll('a[href*="Login"]').forEach(el => el.classList.add('d-none'));
-            document.querySelectorAll('a[href*="Register"]').forEach(el => el.classList.add('d-none'));
+            if (loginBtn) loginBtn.classList.add('d-none');
+            if (registerBtn) registerBtn.classList.add('d-none');
             if (profileDropdown) profileDropdown.classList.remove('d-none');
         } else {
-            document.querySelectorAll('a[href*="Login"]').forEach(el => el.classList.remove('d-none'));
-            document.querySelectorAll('a[href*="Register"]').forEach(el => el.classList.remove('d-none'));
+            if (loginBtn) loginBtn.classList.remove('d-none');
+            if (registerBtn) registerBtn.classList.remove('d-none');
             if (profileDropdown) profileDropdown.classList.add('d-none');
         }
 
@@ -382,12 +380,5 @@ document.addEventListener('DOMContentLoaded', () => {
     Authentication.updateHeader();
     if (Authentication.isAuthenticated()) {
         Authentication.startTokenRefreshTimer();
-    }
-});
-
-// Listen for storage changes (e.g. login/logout in another tab)
-window.addEventListener('storage', (event) => {
-    if (event.key === 'accessToken') {
-        Authentication.updateHeader();
     }
 });
