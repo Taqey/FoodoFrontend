@@ -10,6 +10,7 @@ const Authentication = {
         } else {
             sessionStorage.setItem('accessToken', token);
         }
+        Authentication.updateHeader();
     },
 
     clearToken: () => {
@@ -30,6 +31,8 @@ const Authentication = {
         // Clear cookies with all possible path/secure variations to ensure deletion
         document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
         document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+        
+        Authentication.updateHeader();
     },
 
     isAuthenticated: () => !!Authentication.getToken(),
@@ -379,5 +382,12 @@ document.addEventListener('DOMContentLoaded', () => {
     Authentication.updateHeader();
     if (Authentication.isAuthenticated()) {
         Authentication.startTokenRefreshTimer();
+    }
+});
+
+// Listen for storage changes (e.g. login/logout in another tab)
+window.addEventListener('storage', (event) => {
+    if (event.key === 'accessToken') {
+        Authentication.updateHeader();
     }
 });
