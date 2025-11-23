@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://localhost:7098/api/authentication';
+const API_BASE_URL = 'https://foodo.runasp.net/api/authentication';
 
 const Authentication = {
     // --- State Management ---
