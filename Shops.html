@@ -38,7 +38,6 @@
 
     <header class="header">
         <div class="container-fluid d-flex justify-content-between align-items-center m-0">
-
             <a href="index.html" class="d-flex align-items-center text-decoration-none p-1">
                 <img src="icons/Logo.png" alt="Logo" height="60">
             </a>
@@ -50,7 +49,6 @@
             </nav>
 
             <div class="d-flex align-items-center gap-2">
-
                 <div id="authButtons">
                     <a href="Login.html" class="btn btn-primary">Login</a>
                     <a href="Register.html" class="btn btn-outline-primary">Register</a>
@@ -83,7 +81,6 @@
                         </a>
                     </div>
                 </div>
-
             </div>
         </div>
     </header>
@@ -113,19 +110,21 @@
         const pageSize = 12;
         let currentCategory = '';
 
-        const RESTAURANT_CATEGORIES = [
-            "FastFood", "CasualDining", "FineDining", "Cafe", "Bakery", "DessertShop",
-            "JuiceBar", "Seafood", "Steakhouse", "Pizzeria", "BBQ", "FamilyRestaurant",
-            "HealthyFood", "Vegetarian", "Vegan", "FoodTruck", "Buffet", "Sandwiches",
-            "Egyptian", "Italian", "American", "Mexican", "Turkish", "Chinese",
-            "Japanese", "Indian", "Lebanese", "Syrian", "Greek", "French"
-        ];
+        // RestaurantCategory enum values (string name => integer value)
+        const RESTAURANT_CATEGORIES = {
+            "FastFood": 1, "CasualDining": 2, "FineDining": 3, "Cafe": 4, "Bakery": 5,
+            "DessertShop": 6, "JuiceBar": 7, "Seafood": 8, "Steakhouse": 9, "Pizzeria": 10,
+            "BBQ": 11, "FamilyRestaurant": 12, "HealthyFood": 13, "Vegetarian": 14, "Vegan": 15,
+            "FoodTruck": 16, "Buffet": 17, "Sandwiches": 18, "Egyptian": 19, "Italian": 20,
+            "American": 21, "Mexican": 22, "Turkish": 23, "Chinese": 24, "Japanese": 25,
+            "Indian": 26, "Lebanese": 27, "Syrian": 28, "Greek": 29, "French": 30
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             Authentication.updateHeader();
 
             const filter = document.getElementById('categoryFilter');
-            RESTAURANT_CATEGORIES.sort().forEach(cat => {
+            Object.keys(RESTAURANT_CATEGORIES).sort().forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
                 option.textContent = cat;
@@ -151,7 +150,8 @@
         async function loadShops() {
             let result;
             if (currentCategory) {
-                result = await CustomerService.getAllShopsByCategory(currentCategory, currentPage, pageSize);
+                const categoryValue = RESTAURANT_CATEGORIES[currentCategory];
+                result = await CustomerService.getAllShopsByCategory(categoryValue, currentPage, pageSize);
             } else {
                 result = await CustomerService.getAllShops(currentPage, pageSize);
             }

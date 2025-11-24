@@ -35,7 +35,7 @@
             background-color: #ffc107;
             color: #fff;
             display: flex;
-            align-items: center;
+            align-items-center;
             justify-content: center;
             font-size: 24px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
@@ -60,7 +60,6 @@
 
     <header class="header">
         <div class="container-fluid d-flex justify-content-between align-items-center m-0">
-
             <a href="index.html" class="d-flex align-items-center text-decoration-none p-1">
                 <img src="icons/Logo.png" alt="Logo" height="60">
             </a>
@@ -72,7 +71,6 @@
             </nav>
 
             <div class="d-flex align-items-center gap-2">
-
                 <div id="authButtons">
                     <a href="Login.html" class="btn btn-primary">Login</a>
                     <a href="Register.html" class="btn btn-outline-primary">Register</a>
@@ -105,7 +103,6 @@
                         </a>
                     </div>
                 </div>
-
             </div>
         </div>
     </header>
@@ -167,13 +164,14 @@
         let cart = [];
         let cartModal;
 
-        const FOOD_CATEGORIES = [
-            "Burger", "Pizza", "Pasta", "Sandwich", "Grill", "FriedChicken",
-            "Seafood", "Salad", "Soup", "Dessert", "IceCream", "Juice",
-            "Coffee", "Beverage", "Appetizer", "MainCourse", "SideDish",
-            "Shawarma", "Kebab", "Sushi", "Tacos", "Noodles", "RiceDishes",
-            "Pastry", "Breakfast"
-        ];
+        // FoodCategory enum values (string name => integer value)
+        const FOOD_CATEGORIES = {
+            "Burger": 1, "Pizza": 2, "Pasta": 3, "Sandwich": 4, "Grill": 5, "FriedChicken": 6,
+            "Seafood": 7, "Salad": 8, "Soup": 9, "Dessert": 10, "IceCream": 11, "Juice": 12,
+            "Coffee": 13, "Beverage": 14, "Appetizer": 15, "MainCourse": 16, "SideDish": 17,
+            "Shawarma": 18, "Kebab": 19, "Sushi": 20, "Tacos": 21, "Noodles": 22, "RiceDishes": 23,
+            "Pastry": 24, "Breakfast": 25
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             Authentication.updateHeader();
@@ -181,7 +179,7 @@
             loadCart();
 
             const filter = document.getElementById('categoryFilter');
-            FOOD_CATEGORIES.sort().forEach(cat => {
+            Object.keys(FOOD_CATEGORIES).sort().forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
                 option.textContent = cat;
@@ -215,7 +213,8 @@
             if (currentRestaurantId) {
                 result = await CustomerService.getAllProductsByRestaurant(currentRestaurantId, currentPage, pageSize);
             } else if (currentCategory) {
-                result = await CustomerService.getAllProductsByCategory(currentCategory, currentPage, pageSize);
+                const categoryValue = FOOD_CATEGORIES[currentCategory];
+                result = await CustomerService.getAllProductsByCategory(categoryValue, currentPage, pageSize);
             } else {
                 result = await CustomerService.getAllProducts(currentPage, pageSize);
             }
