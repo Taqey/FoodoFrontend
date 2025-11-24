@@ -1,3 +1,3 @@
 const CONFIG = {
-    API_BASE_URL: 'https://localhost:7098/api'
+    API_BASE_URL: 'http://foodo.runasp.net/api'
 };
