@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://foodo.runasp.net/api/authentication';
+const API_BASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.API_BASE_URL : 'https://foodo.runasp.net/api') + '/Authentication';
 
 const Authentication = {
     // --- State Management ---
@@ -336,6 +336,56 @@ const Authentication = {
             }
 
             return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    verifyEmailRequest: async () => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${API_BASE_URL}/verify-email-request`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to send verification email');
+            }
+
+            return { success: true, message: await response.text() };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    verifyEmail: async (code) => {
+        Authentication.showLoading();
+        const formData = new FormData();
+        formData.append('Code', code);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/verify-email`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to verify email');
+            }
+
+            return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
         } finally {

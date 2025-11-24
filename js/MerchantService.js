@@ -1,24 +1,26 @@
-const MERCHANT_API_URL = 'https://foodo.runasp.net/api/Merchants';
+const MERCHANT_API_URL = (typeof CONFIG !== 'undefined' ? CONFIG.API_BASE_URL : 'https://foodo.runasp.net/api') + '/Merchants';
 
 
 const MerchantService = {
     // --- Products ---
 
-    getAllProducts: async () => {
+    getAllProducts: async (pageNumber = 1, pageSize = 10) => {
         Authentication.showLoading();
         try {
             const response = await fetch(`${MERCHANT_API_URL}/get-all-products`, {
-                method: 'GET',
+                method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${Authentication.getToken()}`
-                }
+                },
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
             });
 
             if (!response.ok) throw new Error('Failed to fetch products');
             return await response.json();
         } catch (error) {
             console.error(error);
-            return [];
+            return { items: [], totalCount: 0 }; // Return empty structure on error
         } finally {
             Authentication.hideLoading();
         }
@@ -231,21 +233,71 @@ const MerchantService = {
         }
     },
 
-    getPurchasedCustomers: async () => {
+    getPurchasedCustomers: async (pageNumber = 1, pageSize = 10) => {
         Authentication.showLoading();
         try {
             const response = await fetch(`${MERCHANT_API_URL}/get-purchased-customers`, {
-                method: 'GET',
+                method: 'POST',
                 headers: {
+                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${Authentication.getToken()}`
-                }
+                },
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
             });
 
             if (!response.ok) throw new Error('Failed to fetch customers');
             return await response.json();
         } catch (error) {
             console.error(error);
-            return [];
+            return { items: [], totalCount: 0 };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    addProductCategories: async (productId, categories) => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${MERCHANT_API_URL}/add-categories/${productId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                },
+                body: JSON.stringify({ Categories: categories })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to add categories');
+            }
+            return { success: true, message: await response.text() };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    removeProductCategories: async (productId, categories) => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${MERCHANT_API_URL}/remove-categories/${productId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${Authentication.getToken()}`
+                },
+                body: JSON.stringify({ Categories: categories })
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to remove categories');
+            }
+            return { success: true, message: await response.text() };
+        } catch (error) {
+            return { success: false, message: error.message };
         } finally {
             Authentication.hideLoading();
         }

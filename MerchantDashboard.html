@@ -102,7 +102,7 @@
 
 <body>
 
- <header class="header">
+    <header class="header">
         <div class="container-fluid d-flex justify-content-between align-items-center m-0">
 
             <a href="#" class="d-flex align-items-center text-decoration-none p-1">
@@ -192,6 +192,16 @@
                         </table>
                     </div>
                 </div>
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span id="productsPageInfo">Page 1</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="changePage('products', -1)">Previous</button>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="changePage('products', 1)">Next</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Orders Management -->
@@ -219,6 +229,15 @@
                                 <!-- Orders will be loaded here -->
                             </tbody>
                         </table>
+                    </div>
+                </div>
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span id="ordersPageInfo">Page 1</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="changePage('orders', -1)">Previous</button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="changePage('orders', 1)">Next</button>
                     </div>
                 </div>
             </div>
@@ -250,6 +269,16 @@
                         </table>
                     </div>
                 </div>
+                <!-- Pagination -->
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <span id="customersPageInfo">Page 1</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="changePage('customers', -1)">Previous</button>
+                        <button class="btn btn-sm btn-outline-secondary"
+                            onclick="changePage('customers', 1)">Next</button>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -264,48 +293,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="productForm">
-                        <input type="hidden" id="productId">
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="productName" class="form-label">Product Name</label>
-                                <input type="text" class="form-control" id="productName" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="productPrice" class="form-label">Price</label>
-                                <input type="number" class="form-control" id="productPrice" step="0.01" required>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="productDescription" class="form-label">Description</label>
-                            <textarea class="form-control" id="productDescription" rows="3"></textarea>
-                        </div>
-
-                        <!-- Attributes Section (Only visible in Edit mode) -->
-                        <div id="attributesSection" class="d-none mt-4 border-top pt-3">
-                            <h5>Attributes</h5>
-                            <div class="input-group mb-3">
-                                <input type="text" class="form-control" id="newAttributeName"
-                                    placeholder="Name (e.g. Size)">
-                                <input type="text" class="form-control" id="newAttributeValue"
-                                    placeholder="Value (e.g. Large)">
-                                <input type="text" class="form-control" id="newAttributeUnit"
-                                    placeholder="Unit (e.g. cm) - Optional">
-                                <button class="btn btn-outline-secondary" type="button"
-                                    onclick="addAttribute()">Add</button>
-                            </div>
-                            <div id="attributesList" class="d-flex flex-wrap gap-2">
-                                <!-- Attributes badges will go here -->
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save
-                        Product</button>
+                    Product</button>
                 </div>
             </div>
         </div>

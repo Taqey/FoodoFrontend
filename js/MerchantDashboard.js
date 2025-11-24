@@ -6,6 +6,24 @@ function showTab(tabId, linkElement) {
     linkElement.classList.add('active');
 }
 
+// --- State Management ---
+const paginationState = {
+    products: { page: 1, size: 10, total: 0 },
+    orders: { page: 1, size: 10, total: 0 },
+    customers: { page: 1, size: 10, total: 0 }
+};
+
+const RESTAURANT_CATEGORIES = [
+    "Italian", "Chinese", "Indian", "Japanese", "Mexican", "American",
+    "French", "Thai", "Greek", "Spanish", "Lebanese", "Turkish",
+    "Vietnamese", "Korean", "Brazilian", "Vegetarian", "Vegan",
+    "GlutenFree", "FastFood", "FineDining", "CasualDining", "Cafe",
+    "Bakery", "Bar", "Pub", "FoodTruck", "StreetFood", "Seafood",
+    "Steakhouse", "Pizza", "Burger", "Sushi", "Dessert", "IceCream",
+    "JuiceBar", "Healthy", "Salad", "Sandwich", "Breakfast", "Brunch",
+    "Dinner", "Lunch", "LateNight"
+];
+
 // --- Product Management Logic ---
 let currentProducts = [];
 let productModal;
@@ -28,10 +46,36 @@ document.addEventListener('DOMContentLoaded', () => {
     loadProducts();
 });
 
+// --- Pagination Logic ---
+function changePage(type, delta) {
+    const state = paginationState[type];
+    const newPage = state.page + delta;
+    if (newPage > 0) { // Ideally check against total pages
+        state.page = newPage;
+        if (type === 'products') loadProducts();
+        else if (type === 'orders') loadOrders();
+        else if (type === 'customers') loadCustomers();
+    }
+}
+
+function updatePaginationUI(type) {
+    const state = paginationState[type];
+    const el = document.getElementById(`${type}PageInfo`);
+    if(el) el.textContent = `Page ${state.page}`;
+}
+
+// --- Product Functions ---
+
 async function loadProducts() {
-    const products = await MerchantService.getAllProducts();
+    const { page, size } = paginationState.products;
+    const result = await MerchantService.getAllProducts(page, size);
+    
+    const products = result.items || [];
+    paginationState.products.total = result.totalCount || 0;
+    
     currentProducts = products;
     renderProducts(products);
+    updatePaginationUI('products');
 }
 
 function renderProducts(products) {
@@ -74,6 +118,7 @@ function openProductModal() {
     document.getElementById('productId').value = '';
     document.getElementById('productModalLabel').textContent = 'Add New Product';
     document.getElementById('attributesSection').classList.add('d-none');
+    renderCategoryCheckboxes([]);
     productModal.show();
 }
 
@@ -90,8 +135,34 @@ async function editProduct(id) {
     document.getElementById('attributesSection').classList.remove('d-none');
 
     renderAttributesList(product.attributes, product.productId);
+    
+    // Handle categories
+    // Assuming product.categories is a list of strings or objects with name
+    const currentCategories = product.categories ? product.categories.map(c => typeof c === 'string' ? c : c.name) : [];
+    renderCategoryCheckboxes(currentCategories);
 
     productModal.show();
+}
+
+function renderCategoryCheckboxes(selectedCategories = []) {
+    const container = document.getElementById('productCategories');
+    if(!container) return;
+    container.innerHTML = '';
+    RESTAURANT_CATEGORIES.forEach(cat => {
+        const isChecked = selectedCategories.includes(cat);
+        const div = document.createElement('div');
+        div.className = 'form-check form-check-inline';
+        div.innerHTML = `
+            <input class="form-check-input product-category-checkbox" type="checkbox" value="${cat}" id="cat_${cat}" ${isChecked ? 'checked' : ''}>
+            <label class="form-check-label" for="cat_${cat}">${cat}</label>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function getSelectedCategories() {
+    const checkboxes = document.querySelectorAll('.product-category-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
 }
 
 function renderAttributesList(attributes, productId) {
@@ -115,6 +186,7 @@ async function saveProduct() {
     const name = document.getElementById('productName').value;
     const price = document.getElementById('productPrice').value;
     const description = document.getElementById('productDescription').value;
+    const selectedCategories = getSelectedCategories();
 
     if (!name || !price) {
         alert('Name and Price are required.');
@@ -124,14 +196,26 @@ async function saveProduct() {
     const productData = {
         productName: name,
         productDescription: description,
-        price: price.toString(), // Backend expects string
-        attributes: [] // Attributes handled separately in edit mode
+        price: price.toString(),
+        attributes: []
     };
 
     let result;
     if (id) {
         result = await MerchantService.updateProduct(id, productData);
+        if (result.success) {
+            // Update Categories
+            const currentProduct = await MerchantService.getProductById(id);
+            const currentCats = currentProduct.categories ? currentProduct.categories.map(c => typeof c === 'string' ? c : c.name) : [];
+            
+            const toAdd = selectedCategories.filter(c => !currentCats.includes(c));
+            const toRemove = currentCats.filter(c => !selectedCategories.includes(c));
+
+            if (toAdd.length > 0) await MerchantService.addProductCategories(id, toAdd);
+            if (toRemove.length > 0) await MerchantService.removeProductCategories(id, toRemove);
+        }
     } else {
+        productData.categories = selectedCategories;
         result = await MerchantService.createProduct(productData);
     }
 
@@ -176,13 +260,12 @@ async function addAttribute() {
 
     const result = await MerchantService.addAttribute(productId, attributesList);
     if (result.success) {
-        // Refresh attributes list
         const product = await MerchantService.getProductById(productId);
         renderAttributesList(product.attributes, productId);
         document.getElementById('newAttributeName').value = '';
         document.getElementById('newAttributeValue').value = '';
         document.getElementById('newAttributeUnit').value = '';
-        loadProducts(); // Update main table too
+        loadProducts();
     } else {
         alert(result.message || 'Failed to add attribute');
     }
@@ -204,12 +287,15 @@ async function removeAttribute(productId, attributeId) {
 // --- Order Functions ---
 
 async function loadOrders() {
-    // Fetching first page with large size for simplicity
-    const response = await MerchantService.getAllOrders(1, 50);
-    // Handle potential pagination wrapper
-    const orders = response && response.items ? response.items : (Array.isArray(response) ? response : []);
+    const { page, size } = paginationState.orders;
+    const result = await MerchantService.getAllOrders(page, size);
+    
+    const orders = result.items || [];
+    paginationState.orders.total = result.totalCount || 0;
+    
     currentOrders = orders;
     renderOrders(currentOrders);
+    updatePaginationUI('orders');
 }
 
 function renderOrders(orders) {
@@ -223,7 +309,6 @@ function renderOrders(orders) {
 
     orders.forEach(o => {
         const row = document.createElement('tr');
-        // Adjust field names based on actual DTO
         const orderId = o.id || o.orderId;
         const customer = o.customerName || 'Customer';
         const date = new Date(o.orderDate || o.createdOn).toLocaleDateString();
@@ -272,7 +357,6 @@ async function viewOrder(id) {
     document.getElementById('orderStatusSelect').value = status;
     document.getElementById('orderTotalAmount').textContent = '$' + total;
 
-    // Render Items
     const tbody = document.getElementById('orderItemsTableBody');
     tbody.innerHTML = '';
     if (order.orderItems) {
@@ -288,9 +372,7 @@ async function viewOrder(id) {
         });
     }
 
-    // Store current order ID for update
     document.getElementById('orderModal').dataset.orderId = orderId;
-
     orderModalInstance.show();
 }
 
@@ -311,8 +393,14 @@ async function updateOrderStatus() {
 // --- Customer Functions ---
 
 async function loadCustomers() {
-    const customers = await MerchantService.getPurchasedCustomers();
+    const { page, size } = paginationState.customers;
+    const result = await MerchantService.getPurchasedCustomers(page, size);
+    
+    const customers = result.items || [];
+    paginationState.customers.total = result.totalCount || 0;
+    
     renderCustomers(customers);
+    updatePaginationUI('customers');
 }
 
 function renderCustomers(customers) {

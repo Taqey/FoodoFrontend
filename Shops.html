@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restaurants - Foodo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="icons/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800,900" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/4.5.6/css/ionicons.min.css">
+    <link rel="stylesheet" href="css/dropdown.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/Authentication.js"></script>
+    <script src="js/CustomerService.js"></script>
+    <style>
+        .shop-card {
+            transition: transform 0.3s;
+            cursor: pointer;
+        }
+
+        .shop-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .shop-img {
+            height: 200px;
+            object-fit: cover;
+            background-color: #eee;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container-fluid d-flex justify-content-between align-items-center m-0">
+
+            <a href="index.html" class="d-flex align-items-center text-decoration-none p-1">
+                <img src="icons/Logo.png" alt="Logo" height="60">
+            </a>
+
+            <nav class="d-none d-md-flex gap-4">
+                <a href="index.html" class="text-decoration-none text-dark">Home</a>
+                <a href="Shops.html" class="text-decoration-none text-dark fw-bold">Restaurants</a>
+                <a href="Products.html" class="text-decoration-none text-dark">Foods</a>
+            </nav>
+
+            <div class="d-flex align-items-center gap-2">
+
+                <div id="authButtons">
+                    <a href="Login.html" class="btn btn-primary">Login</a>
+                    <a href="Register.html" class="btn btn-outline-primary">Register</a>
+                </div>
+
+                <!-- Dropdown -->
+                <div class="btn-group d-none" id="drop">
+                    <a href="#" class="btn-img img dropdown-toggle rounded-circle" data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        style="background-image: url('images/user.png'); width:50px; height:50px;">
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-end mt-2">
+                        <a class="dropdown-item d-flex align-items-center" href="CustomerDashboard.html">
+                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                <span class="ion-ios-person"></span>
+                            </div>
+                            My Profile
+                        </a>
+                        <a class="dropdown-item d-flex align-items-center" href="CustomerDashboard.html#orders">
+                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                <span class="ion-ios-cart"></span>
+                            </div>
+                            My Orders
+                        </a>
+                        <a class="dropdown-item d-flex align-items-center" id="logout" href="#">
+                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                <span class="ion-ios-power"></span>
+                            </div>
+                            Log Out
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </header>
+
+    <div class="container py-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Restaurants</h2>
+            <div class="d-flex gap-2">
+                <select id="categoryFilter" class="form-select" style="width: 200px;">
+                    <option value="">All Categories</option>
+                    <!-- Categories injected here -->
+                </select>
+            </div>
+        </div>
+
+        <div id="shopsContainer" class="row">
+            <!-- Shops injected here -->
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-center align-items-center mt-5 gap-3">
+            <button class="btn btn-outline-secondary" onclick="changePage(-1)">Previous</button>
+            <span id="pageInfo">Page 1</span>
+            <button class="btn btn-outline-secondary" onclick="changePage(1)">Next</button>
+        </div>
+    </div>
+
+    <script>
+        let currentPage = 1;
+        const pageSize = 12;
+        let currentCategory = '';
+
+        const RESTAURANT_CATEGORIES = [
+            "Italian", "Chinese", "Indian", "Japanese", "Mexican", "American",
+            "French", "Thai", "Greek", "Spanish", "Lebanese", "Turkish",
+            "Vietnamese", "Korean", "Brazilian", "Vegetarian", "Vegan",
+            "GlutenFree", "FastFood", "FineDining", "CasualDining", "Cafe",
+            "Bakery", "Bar", "Pub", "FoodTruck", "StreetFood", "Seafood",
+            "Steakhouse", "Pizza", "Burger", "Sushi", "Dessert", "IceCream",
+            "JuiceBar", "Healthy", "Salad", "Sandwich", "Breakfast", "Brunch",
+            "Dinner", "Lunch", "LateNight"
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Authentication.updateHeader();
+
+            // Populate Category Filter
+            const filter = document.getElementById('categoryFilter');
+            RESTAURANT_CATEGORIES.sort().forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = cat;
+                filter.appendChild(option);
+            });
+
+            // Check URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const catParam = urlParams.get('category');
+            if (catParam) {
+                currentCategory = catParam;
+                filter.value = catParam;
+            }
+
+            filter.addEventListener('change', (e) => {
+                currentCategory = e.target.value;
+                currentPage = 1;
+                loadShops();
+            });
+
+            loadShops();
+        });
+
+        async function loadShops() {
+            let result;
+            if (currentCategory) {
+                result = await CustomerService.getAllShopsByCategory(currentCategory, currentPage, pageSize);
+            } else {
+                result = await CustomerService.getAllShops(currentPage, pageSize);
+            }
+
+            const shops = result.items || [];
+            renderShops(shops);
+            document.getElementById('pageInfo').textContent = `Page ${currentPage}`;
+        }
+
+        function renderShops(shops) {
+            const container = document.getElementById('shopsContainer');
+            container.innerHTML = '';
+
+            if (shops.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p>No restaurants found.</p></div>';
+                return;
+            }
+
+            shops.forEach(shop => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3 mb-4';
+                // Assuming shop object structure. Adjust if needed.
+                const name = shop.storeName || shop.userName || 'Restaurant';
+                const desc = shop.storeDescription || 'No description available.';
+                const id = shop.id || shop.userId; // Adjust based on backend DTO
+
+                col.innerHTML = `
+                    <div class="card shop-card h-100" onclick="window.location.href='Products.html?restaurantId=${id}'">
+                        <div class="card-img-top shop-img d-flex align-items-center justify-content-center text-muted">
+                            <i class="ion-ios-restaurant" style="font-size: 3rem;"></i>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">${name}</h5>
+                            <p class="card-text text-muted small text-truncate">${desc}</p>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage > 0) {
+                currentPage = newPage;
+                loadShops();
+            }
+        }
+    </script>
+</body>
+
+</html>
