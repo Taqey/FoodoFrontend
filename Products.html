@@ -78,7 +78,6 @@
                     <a href="Register.html" class="btn btn-outline-primary">Register</a>
                 </div>
 
-                <!-- Dropdown -->
                 <div class="btn-group d-none" id="drop">
                     <a href="#" class="btn-img img dropdown-toggle rounded-circle" data-bs-toggle="dropdown"
                         aria-expanded="false"
@@ -117,16 +116,13 @@
             <div class="d-flex gap-2">
                 <select id="categoryFilter" class="form-select" style="width: 200px;">
                     <option value="">All Categories</option>
-                    <!-- Categories injected here -->
                 </select>
             </div>
         </div>
 
         <div id="productsContainer" class="row">
-            <!-- Products injected here -->
         </div>
 
-        <!-- Pagination -->
         <div class="d-flex justify-content-center align-items-center mt-5 gap-3">
             <button class="btn btn-outline-secondary" onclick="changePage(-1)">Previous</button>
             <span id="pageInfo">Page 1</span>
@@ -134,13 +130,11 @@
         </div>
     </div>
 
-    <!-- Cart Button -->
     <div class="cart-btn" onclick="openCart()">
         <i class="ion-ios-cart"></i>
         <span class="cart-badge" id="cartCount">0</span>
     </div>
 
-    <!-- Cart Modal -->
     <div class="modal fade" id="cartModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -150,7 +144,6 @@
                 </div>
                 <div class="modal-body">
                     <div id="cartItems">
-                        <!-- Cart items -->
                     </div>
                     <div class="d-flex justify-content-between mt-3 fw-bold">
                         <span>Total:</span>
@@ -190,7 +183,6 @@
             cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
             loadCart();
 
-            // Populate Category Filter
             const filter = document.getElementById('categoryFilter');
             RESTAURANT_CATEGORIES.sort().forEach(cat => {
                 const option = document.createElement('option');
@@ -199,7 +191,6 @@
                 filter.appendChild(option);
             });
 
-            // Check URL params
             const urlParams = new URLSearchParams(window.location.search);
             const catParam = urlParams.get('category');
             const restParam = urlParams.get('restaurantId');
@@ -207,8 +198,6 @@
             if (restParam) {
                 currentRestaurantId = restParam;
                 document.getElementById('pageTitle').textContent = 'Restaurant Menu';
-                // Disable category filter if viewing specific restaurant? Or allow filtering within restaurant?
-                // Backend GetAllProductsByRestaurant doesn't take category. So disable or hide filter.
                 filter.style.display = 'none';
             } else if (catParam) {
                 currentCategory = catParam;
@@ -219,20 +208,44 @@
                 currentCategory = e.target.value;
                 currentPage = 1;
                 loadProducts();
-                if (products.length === 0) {
-                    container.innerHTML = '<div class="col-12 text-center"><p>No products found.</p></div>';
-                    return;
-                }
+            });
 
-                products.forEach(p => {
-                    const col = document.createElement('div');
-                    col.className = 'col-md-4 col-lg-3 mb-4';
+            loadProducts();
+        });
 
-                    const attributesHtml = p.attributes ? p.attributes.map(a =>
-                        `<small class="text-muted d-block">${a.name}: ${a.value}</small>`
-                    ).join('') : '';
+        async function loadProducts() {
+            let result;
+            if (currentRestaurantId) {
+                result = await CustomerService.getAllProductsByRestaurant(currentRestaurantId, currentPage, pageSize);
+            } else if (currentCategory) {
+                result = await CustomerService.getAllProductsByCategory(currentCategory, currentPage, pageSize);
+            } else {
+                result = await CustomerService.getAllProducts(currentPage, pageSize);
+            }
 
-                    col.innerHTML = `
+            const products = result.items || [];
+            renderProducts(products);
+            document.getElementById('pageInfo').textContent = `Page ${currentPage}`;
+        }
+
+        function renderProducts(products) {
+            const container = document.getElementById('productsContainer');
+            container.innerHTML = '';
+
+            if (products.length === 0) {
+                container.innerHTML = '<div class="col-12 text-center"><p>No products found.</p></div>';
+                return;
+            }
+
+            products.forEach(p => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-lg-3 mb-4';
+
+                const attributesHtml = p.attributes ? p.attributes.map(a =>
+                    `<small class="text-muted d-block">${a.name}: ${a.value}</small>`
+                ).join('') : '';
+
+                col.innerHTML = `
                     <div class="card product-card h-100">
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">${p.productName}</h5>
@@ -240,73 +253,70 @@
                             <div class="mb-2">${attributesHtml}</div>
                             <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <span class="fw-bold">$${p.price}</span>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addToCart(${p.productId}, '${p.productName}', ${p.price}, ${p.merchantId})">Add</button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="addToCart(${p.productId}, '${p.productName}', ${p.price}, '${p.merchantId || ''}')">Add</button>
                             </div>
                         </div>
                     </div>
                 `;
-                    container.appendChild(col);
-                });
-            }
+                container.appendChild(col);
+            });
+        }
 
         function changePage(delta) {
-                    const newPage = currentPage + delta;
-                    if (newPage > 0) {
-                        currentPage = newPage;
-                        loadProducts();
-                    }
-                }
+            const newPage = currentPage + delta;
+            if (newPage > 0) {
+                currentPage = newPage;
+                loadProducts();
+            }
+        }
 
-        // --- Cart Logic ---
         function loadCart() {
-                    const stored = localStorage.getItem('foodo_cart');
-                    if (stored) cart = JSON.parse(stored);
-                    updateCartUI();
-                }
+            const stored = localStorage.getItem('foodo_cart');
+            if (stored) cart = JSON.parse(stored);
+            updateCartUI();
+        }
 
         function saveCart() {
-                    localStorage.setItem('foodo_cart', JSON.stringify(cart));
-                    updateCartUI();
-                }
+            localStorage.setItem('foodo_cart', JSON.stringify(cart));
+            updateCartUI();
+        }
 
         function addToCart(id, name, price, merchantId) {
-                    // Check if cart has items from another merchant
-                    if (cart.length > 0 && cart[0].merchantId !== merchantId) {
-                        if (!confirm('Your cart contains items from another restaurant. Clear cart to add this item?')) {
-                            return;
-                        }
-                        cart = [];
-                    }
-
-                    const existing = cart.find(i => i.id === id);
-                    if (existing) {
-                        existing.quantity++;
-                    } else {
-                        cart.push({ id, name, price, merchantId, quantity: 1 });
-                    }
-                    saveCart();
-                    // alert('Added to cart!');
+            if (cart.length > 0 && cart[0].merchantId !== merchantId) {
+                if (!confirm('Your cart contains items from another restaurant. Clear cart to add this item?')) {
+                    return;
                 }
+                cart = [];
+            }
+
+            const existing = cart.find(i => i.id === id);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                cart.push({ id, name, price, merchantId, quantity: 1 });
+            }
+            saveCart();
+        }
 
         function updateCartUI() {
-                    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
-                    document.getElementById('cartCount').textContent = count;
-                }
+            const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+            document.getElementById('cartCount').textContent = count;
+        }
 
         function openCart() {
-                    const container = document.getElementById('cartItems');
-                    container.innerHTML = '';
-                    let total = 0;
+            const container = document.getElementById('cartItems');
+            container.innerHTML = '';
+            let total = 0;
 
-                    if (cart.length === 0) {
-                        container.innerHTML = '<p class="text-center">Cart is empty.</p>';
-                    } else {
-                        cart.forEach(item => {
-                            const itemTotal = item.price * item.quantity;
-                            total += itemTotal;
-                            const div = document.createElement('div');
-                            div.className = 'd-flex justify-content-between align-items-center mb-2 border-bottom pb-2';
-                            div.innerHTML = `
+            if (cart.length === 0) {
+                container.innerHTML = '<p class="text-center">Cart is empty.</p>';
+            } else {
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.quantity;
+                    total += itemTotal;
+                    const div = document.createElement('div');
+                    div.className = 'd-flex justify-content-between align-items-center mb-2 border-bottom pb-2';
+                    div.innerHTML = `
                         <div>
                             <div>${item.name}</div>
                             <small class="text-muted">$${item.price} x ${item.quantity}</small>
@@ -316,52 +326,52 @@
                             <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${item.id})">&times;</button>
                         </div>
                     `;
-                            container.appendChild(div);
-                        });
-                    }
-                    document.getElementById('cartTotal').textContent = '$' + total.toFixed(2);
-                    cartModal.show();
-                }
+                    container.appendChild(div);
+                });
+            }
+            document.getElementById('cartTotal').textContent = '$' + total.toFixed(2);
+            cartModal.show();
+        }
 
         function removeFromCart(id) {
-                    cart = cart.filter(i => i.id !== id);
-                    saveCart();
-                    openCart(); // Refresh modal
-                }
+            cart = cart.filter(i => i.id !== id);
+            saveCart();
+            openCart();
+        }
 
         function clearCart() {
-                    cart = [];
-                    saveCart();
-                    openCart();
-                }
+            cart = [];
+            saveCart();
+            openCart();
+        }
 
         async function checkout() {
-                    if (cart.length === 0) return;
+            if (cart.length === 0) return;
 
-                    if (!Authentication.getToken()) {
-                        alert('Please login to place an order.');
-                        window.location.href = 'Login.html';
-                        return;
-                    }
+            if (!Authentication.getToken()) {
+                alert('Please login to place an order.');
+                window.location.href = 'Login.html';
+                return;
+            }
 
-                    const merchantId = cart[0].merchantId;
-                    const items = cart.map(i => ({ ProductId: i.id, Quantity: i.quantity }));
+            const merchantId = cart[0].merchantId;
+            const items = cart.map(i => ({ ProductId: i.id, Quantity: i.quantity }));
 
-                    const orderData = {
-                        RestaurantId: merchantId,
-                        Items: items
-                    };
+            const orderData = {
+                RestaurantId: merchantId,
+                Items: items
+            };
 
-                    const result = await CustomerService.placeOrder(orderData);
-                    if (result.success) {
-                        alert('Order placed successfully!');
-                        clearCart();
-                        cartModal.hide();
-                        window.location.href = 'CustomerDashboard.html#orders';
-                    } else {
-                        alert(result.message || 'Failed to place order.');
-                    }
-                }
+            const result = await CustomerService.placeOrder(orderData);
+            if (result.success) {
+                alert('Order placed successfully!');
+                clearCart();
+                cartModal.hide();
+                window.location.href = 'CustomerDashboard.html#orders';
+            } else {
+                alert(result.message || 'Failed to place order.');
+            }
+        }
     </script>
 </body>
 

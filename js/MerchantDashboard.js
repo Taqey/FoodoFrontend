@@ -70,8 +70,8 @@ async function loadProducts() {
     const { page, size } = paginationState.products;
     const result = await MerchantService.getAllProducts(page, size);
     
-    const products = result.Items || [];
-    paginationState.products.total = result.TotalItems || 0;
+    const products = result.items || [];
+    paginationState.products.total = result.totalItems || 0;
     
     currentProducts = products;
     renderProducts(products);
@@ -290,8 +290,8 @@ async function loadOrders() {
     const { page, size } = paginationState.orders;
     const result = await MerchantService.getAllOrders(page, size);
     
-    const orders = result.Items || [];
-    paginationState.orders.total = result.TotalItems || 0;
+    const orders = result.items || [];
+    paginationState.orders.total = result.totalItems || 0;
     
     currentOrders = orders;
     renderOrders(currentOrders);
@@ -396,8 +396,8 @@ async function loadCustomers() {
     const { page, size } = paginationState.customers;
     const result = await MerchantService.getPurchasedCustomers(page, size);
     
-    const customers = result.Items || [];
-    paginationState.customers.total = result.TotalItems || 0;
+    const customers = result.items || [];
+    paginationState.customers.total = result.totalItems || 0;
     
     renderCustomers(customers);
     updatePaginationUI('customers');
