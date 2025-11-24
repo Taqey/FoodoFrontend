@@ -1,4 +1,4 @@
-const MERCHANT_API_URL = 'https://foodo.runasp.net/api/Merchants';
+const MERCHANT_API_URL = 'https://localhost:7098/api/Merchants';
 
 
 const MerchantService = {

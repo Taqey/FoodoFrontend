@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://foodo.runasp.net/api/authentication';
+const API_BASE_URL = 'https://localhost:7098/api/authentication';
 
 const Authentication = {
     // --- State Management ---
@@ -196,11 +196,7 @@ const Authentication = {
             const data = await response.json();
 
             // --- Merchant flow ---
-            // Save tempUserId for categories selection
-            sessionStorage.setItem('tempUserId', data.userId);
-            // Redirect to categories page first
-            window.location.href = 'Categories.html';
-
+            // Return data so caller can handle redirection
             return { success: true, data: data };
         } catch (error) {
             return { success: false, message: error.message };
