@@ -346,20 +346,19 @@
                     // Pass userId if needed? 
                     // The add-category endpoint needs UserId. 
                     // registerMerchant returns result.Data which might contain the User object or ID.
-                    // Let's assume result.data.id or similar.
                     // I'll save it to sessionStorage to pass to next page
 
                     // Inspecting backend Register method return:
                     // It returns Ok(result.Data). 
-                    // I need to know what result.Data is. 
-                    // Usually it's the User object.
-                    // I'll assume it has an Id.
+                    // We expect result.data.userId based on Authentication.js previous logic
 
-                    if (result.data && result.data.id) {
-                        sessionStorage.setItem('tempUserId', result.data.id);
+                    if (result.data && (result.data.userId || result.data.id)) {
+                        const userId = result.data.userId || result.data.id;
+                        sessionStorage.setItem('tempUserId', userId);
                         window.location.href = 'Categories.html';
                     } else {
                         // Fallback if ID not found, maybe login first?
+                        console.error("User ID not found in response:", result);
                         alert('Registration successful! Please login to setup your store.');
                         window.location.href = 'Login.html';
                     }
