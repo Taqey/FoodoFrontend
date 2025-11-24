@@ -14,7 +14,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalCount: 0 };
+            return { items: [], totalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -26,13 +26,13 @@ const CustomerService = {
             const response = await fetch(`${CUSTOMER_API_URL}/get-all-shops-by-category`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Category: category, PaginationRequest: { PageNumber: pageNumber, PageSize: pageSize } })
+                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch shops by category');
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalCount: 0 };
+            return { items: [], totalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -65,7 +65,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalCount: 0 };
+            return { items: [], totalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -77,13 +77,13 @@ const CustomerService = {
             const response = await fetch(`${CUSTOMER_API_URL}/get-all-products-by-category`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Category: category, PaginationRequest: { PageNumber: pageNumber, PageSize: pageSize } })
+                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch products by category');
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalCount: 0 };
+            return { items: [], totalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -95,13 +95,13 @@ const CustomerService = {
             const response = await fetch(`${CUSTOMER_API_URL}/get-all-products-by-restaurant`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ RestaurantId: restaurantId, PaginationRequest: { PageNumber: pageNumber, PageSize: pageSize } })
+                body: JSON.stringify({ MerchantId: restaurantId, Page: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch products by restaurant');
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalCount: 0 };
+            return { items: [], totalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -161,7 +161,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalCount: 0 };
+            return { items: [], totalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -190,7 +190,7 @@ const CustomerService = {
         Authentication.showLoading();
         try {
             const response = await fetch(`${CUSTOMER_API_URL}/cancel-order/${orderId}`, {
-                method: 'PUT', // Assuming PUT based on other status updates, or POST? Controller says [HttpPut("cancel-order/{id}")]
+                method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${Authentication.getToken()}`
                 }

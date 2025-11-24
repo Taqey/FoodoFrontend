@@ -221,68 +221,269 @@
                         onclick="cancelOrder()">Cancel Order</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
-            </div>
-        </div>
-    </div>
+                flex-shrink: 0;
+                }
 
-    <script>
-        let currentPage = 1;
-        const pageSize = 10;
-        let currentOrders = [];
-        let orderModal;
-        let currentOrderId = null;
+                .sidebar .nav-link {
+                color: #333;
+                padding: 15px 25px;
+                font-weight: 500;
+                }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            Authentication.requireRole('Customer');
-            Authentication.updateHeader();
+                .sidebar .nav-link.active {
+                background: #f8f9fa;
+                color: #ffc107;
+                border-right: 3px solid #ffc107;
+                }
 
-            orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
+                .content-area {
+                flex-grow: 1;
+                padding: 30px;
+                background: #fcfcfc;
+                }
 
-            loadOrders();
+                .tab-pane {
+                display: none;
+                }
 
-            // Handle URL hash for tabs
-            if (window.location.hash === '#orders') {
-                showTab('orders');
-            }
+                .tab-pane.active {
+                display: block;
+                }
+                </style>
+                </head>
 
-            document.getElementById('changePasswordForm').addEventListener('submit', changePassword);
-        });
+                <body>
 
-        function showTab(tabId, linkElement) {
-            document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
-            document.getElementById(tabId).classList.add('active');
+                    <header class="header">
+                        <div class="container-fluid d-flex justify-content-between align-items-center m-0">
 
-            if (linkElement) {
-                document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
-                linkElement.classList.add('active');
-            }
-        }
+                            <a href="index.html" class="d-flex align-items-center text-decoration-none p-1">
+                                <img src="icons/Logo.png" alt="Logo" height="60">
+                            </a>
 
-        async function loadOrders() {
-            const result = await CustomerService.getAllOrders(currentPage, pageSize);
-            currentOrders = result.items || [];
-            renderOrders(currentOrders);
-            document.getElementById('ordersPageInfo').textContent = `Page ${currentPage}`;
-        }
+                            <nav class="d-none d-md-flex gap-4">
+                                <a href="index.html" class="text-decoration-none text-dark">Home</a>
+                                <a href="Shops.html" class="text-decoration-none text-dark">Restaurants</a>
+                                <a href="Products.html" class="text-decoration-none text-dark">Foods</a>
+                            </nav>
 
-        function renderOrders(orders) {
-            const tbody = document.getElementById('ordersTableBody');
-            tbody.innerHTML = '';
+                            <div class="d-flex align-items-center gap-2">
+                                <!-- Dropdown -->
+                                <div class="btn-group" id="drop">
+                                    <a href="#" class="btn-img img dropdown-toggle rounded-circle"
+                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="background-image: url('images/user.png'); width:50px; height:50px;">
+                                    </a>
 
-            if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No orders found.</td></tr>';
-                return;
-            }
+                                    <div class="dropdown-menu dropdown-menu-end mt-2">
+                                        <a class="dropdown-item d-flex align-items-center" href="#"
+                                            onclick="showTab('orders')">
+                                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                                <span class="ion-ios-cart"></span>
+                                            </div>
+                                            My Orders
+                                        </a>
+                                        <a class="dropdown-item d-flex align-items-center" id="logout" href="#">
+                                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                                <span class="ion-ios-power"></span>
+                                            </div>
+                                            Log Out
+                                        </a>
+                                    </div>
+                                </div>
 
-            orders.forEach(o => {
-                const row = document.createElement('tr');
-                const orderId = o.id || o.orderId;
-                const restaurant = o.restaurantName || 'Restaurant'; // Adjust based on DTO
-                const date = new Date(o.orderDate || o.createdOn).toLocaleDateString();
-                const total = o.totalAmount || o.totalPrice;
-                const status = o.status;
+                            </div>
+                        </div>
+                    </header>
 
-                row.innerHTML = `
+                    <div class="dashboard-container">
+                        <!-- Sidebar -->
+                        <div class="sidebar d-none d-md-block">
+                            <nav class="nav flex-column">
+                                <a class="nav-link active" href="#" onclick="showTab('orders', this)">
+                                    <i class="ion-ios-cart"></i> My Orders
+                                </a>
+                                <a class="nav-link" href="#" onclick="showTab('security', this)">
+                                    <i class="ion-ios-lock"></i> Security
+                                </a>
+                            </nav>
+                        </div>
+
+                        <!-- Content Area -->
+                        <div class="content-area">
+
+                            <!-- Orders Tab -->
+                            <div id="orders" class="tab-pane active">
+                                <h3>My Orders</h3>
+                                <div class="card p-4 mt-3">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover align-middle">
+                                            <thead>
+                                                <tr>
+                                                    <th>Order ID</th>
+                                                    <th>Restaurant</th>
+                                                    <th>Date</th>
+                                                    <th>Total</th>
+                                                    <th>Status</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="ordersTableBody">
+                                                <!-- Orders injected here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <!-- Pagination -->
+                                    <div class="d-flex justify-content-between align-items-center mt-3">
+                                        <span id="ordersPageInfo">Page 1</span>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-secondary"
+                                                onclick="changePage(-1)">Previous</button>
+                                            <button class="btn btn-sm btn-outline-secondary"
+                                                onclick="changePage(1)">Next</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Security Tab -->
+                            <div id="security" class="tab-pane">
+                                <h3>Security</h3>
+                                <div class="card p-4 mt-3" style="max-width: 500px;">
+                                    <h5>Change Password</h5>
+                                    <form id="changePasswordForm">
+                                        <div class="mb-3">
+                                            <label class="form-label">Current Password</label>
+                                            <input type="password" class="form-control" id="currentPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">New Password</label>
+                                            <input type="password" class="form-control" id="newPassword" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Confirm New Password</label>
+                                            <input type="password" class="form-control" id="confirmNewPassword"
+                                                required>
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Update Password</button>
+                                    </form>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <!-- Order Details Modal -->
+                    <div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Order Details #<span id="orderModalId"></span></h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="row mb-4">
+                                        <div class="col-md-6">
+                                            <h6>Restaurant</h6>
+                                            <p class="mb-1" id="orderRestaurantName"></p>
+                                        </div>
+                                        <div class="col-md-6 text-end">
+                                            <h6>Order Info</h6>
+                                            <p class="mb-1" id="orderDate"></p>
+                                            <p class="mb-1 fw-bold" id="orderStatusDisplay"></p>
+                                        </div>
+                                    </div>
+
+                                    <h6>Items</h6>
+                                    <div class="table-responsive mb-3">
+                                        <table class="table table-sm table-bordered">
+                                            <thead>
+                                                <tr>
+                                                    <th>Item</th>
+                                                    <th>Price</th>
+                                                    <th>Qty</th>
+                                                    <th>Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="orderItemsTableBody"></tbody>
+                                            <tfoot>
+                                                <tr>
+                                                    <td colspan="3" class="text-end fw-bold">Total Amount:</td>
+                                                    <td class="fw-bold" id="orderTotalAmount"></td>
+                                                </tr>
+                                            </tfoot>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-danger d-none" id="cancelOrderBtn"
+                                        onclick="cancelOrder()">Cancel Order</button>
+                                    <button type="button" class="btn btn-secondary"
+                                        data-bs-dismiss="modal">Close</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <script>
+                        let currentPage = 1;
+                        const pageSize = 10;
+                        let currentOrders = [];
+                        let orderModal;
+                        let currentOrderId = null;
+
+                        document.addEventListener('DOMContentLoaded', () => {
+                            Authentication.requireRole('Customer');
+                            Authentication.updateHeader();
+
+                            orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
+
+                            loadOrders();
+
+                            // Handle URL hash for tabs
+                            if (window.location.hash === '#orders') {
+                                showTab('orders');
+                            }
+
+                            document.getElementById('changePasswordForm').addEventListener('submit', changePassword);
+                        });
+
+                        function showTab(tabId, linkElement) {
+                            document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
+                            document.getElementById(tabId).classList.add('active');
+
+                            if (linkElement) {
+                                document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
+                                linkElement.classList.add('active');
+                            }
+                        }
+
+                        async function loadOrders() {
+                            const result = await CustomerService.getAllOrders(currentPage, pageSize);
+                            currentOrders = result.items || [];
+                            renderOrders(currentOrders);
+                            document.getElementById('ordersPageInfo').textContent = `Page ${currentPage}`;
+                        }
+
+                        function renderOrders(orders) {
+                            const tbody = document.getElementById('ordersTableBody');
+                            tbody.innerHTML = '';
+
+                            if (orders.length === 0) {
+                                tbody.innerHTML = '<tr><td colspan="6" class="text-center">No orders found.</td></tr>';
+                                return;
+                            }
+
+                            orders.forEach(o => {
+                                const row = document.createElement('tr');
+                                const orderId = o.id || o.orderId;
+                                const restaurant = o.restaurantName || 'Restaurant'; // Adjust based on DTO
+                                const date = new Date(o.orderDate || o.createdOn).toLocaleDateString();
+                                const total = o.totalAmount || o.totalPrice;
+                                const status = o.status;
+
+                                row.innerHTML = `
                     <td>#${orderId}</td>
                     <td>${restaurant}</td>
                     <td>${date}</td>
@@ -292,118 +493,107 @@
                         <button class="btn btn-sm btn-outline-primary" onclick="viewOrder('${orderId}')">View</button>
                     </td>
                 `;
-                tbody.appendChild(row);
-            });
-        }
+                                tbody.appendChild(row);
+                            });
+                        }
 
-        function getStatusBadgeColor(status) {
-            switch (status) {
-                case 'Pending': return 'warning';
-                case 'InProgress': return 'info';
-                case 'OutForDelivery': return 'primary';
-                case 'Completed': return 'success';
-                case 'Cancelled': return 'danger';
-                default: return 'secondary';
-            }
-        }
+                        function getStatusBadgeColor(status) {
+                            switch (status) {
+                                case 'Pending': return 'warning';
+                                case 'InProgress': return 'info';
+                                case 'OutForDelivery': return 'primary';
+                                case 'Completed': return 'success';
+                                case 'Cancelled': return 'danger';
+                                default: return 'secondary';
+                            }
+                        }
 
-        function changePage(delta) {
-            const newPage = currentPage + delta;
-            if (newPage > 0) {
-                currentPage = newPage;
-                loadOrders();
-            }
-        }
+                        function changePage(delta) {
+                            const newPage = currentPage + delta;
+                            if (newPage > 0) {
+                                currentPage = newPage;
+                                loadOrders();
+                            }
+                        }
 
-        async function viewOrder(id) {
-            // We might need to fetch full details if list doesn't have items
-            // But let's assume we can get it from list or fetch by ID if needed.
-            // CustomerService has getOrderById? No, I didn't implement it in CustomerService.js!
-            // Wait, I implemented getAllOrders. I should check if I added getOrderById.
-            // I did NOT add getOrderById to CustomerService.js.
-            // I need to add it or use the list item if it has details.
-            // Usually list items are summaries.
-            // Backend CustomersController has `GetOrderById`.
-            // I should update CustomerService.js to include `getOrderById`.
+                        async function viewOrder(id) {
+                            let order = currentOrders.find(o => (o.id || o.orderId) == id);
 
-            // For now, let's try to find in currentOrders, if items missing, we need to fetch.
-            let order = currentOrders.find(o => (o.id || o.orderId) == id);
+                            if (!order || !order.orderItems || order.orderItems.length === 0) {
+                                const fullOrder = await CustomerService.getOrderById(id);
+                                if (fullOrder) {
+                                    order = fullOrder;
+                                }
+                            }
 
-            // If order items are missing, we really should fetch.
-            // I'll quickly update CustomerService.js in next step if needed.
-            // For now, let's assume I'll add it.
+                            if (!order) return;
+                            currentOrderId = id;
 
-            // Placeholder:
-            // order = await CustomerService.getOrderById(id);
+                            document.getElementById('orderModalId').textContent = id;
+                            document.getElementById('orderRestaurantName').textContent = order.restaurantName || 'Restaurant';
+                            document.getElementById('orderDate').textContent = new Date(order.orderDate || order.createdOn).toLocaleString();
+                            document.getElementById('orderStatusDisplay').textContent = order.status;
+                            document.getElementById('orderTotalAmount').textContent = '$' + (order.totalAmount || order.totalPrice);
 
-            if (!order) return;
-            currentOrderId = id;
-
-            document.getElementById('orderModalId').textContent = id;
-            document.getElementById('orderRestaurantName').textContent = order.restaurantName || 'Restaurant';
-            document.getElementById('orderDate').textContent = new Date(order.orderDate || o.createdOn).toLocaleString();
-            document.getElementById('orderStatusDisplay').textContent = order.status;
-            document.getElementById('orderTotalAmount').textContent = '$' + (order.totalAmount || order.totalPrice);
-
-            const tbody = document.getElementById('orderItemsTableBody');
-            tbody.innerHTML = '';
-            if (order.orderItems) {
-                order.orderItems.forEach(item => {
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
+                            const tbody = document.getElementById('orderItemsTableBody');
+                            tbody.innerHTML = '';
+                            if (order.orderItems) {
+                                order.orderItems.forEach(item => {
+                                    const row = document.createElement('tr');
+                                    row.innerHTML = `
                         <td>${item.itemName}</td>
                         <td>$${item.price}</td>
                         <td>${item.quantity}</td>
                         <td>$${(item.price * item.quantity).toFixed(2)}</td>
                     `;
-                    tbody.appendChild(row);
-                });
-            }
+                                    tbody.appendChild(row);
+                                });
+                            }
 
-            // Show Cancel button if status is Pending
-            const cancelBtn = document.getElementById('cancelOrderBtn');
-            if (order.status === 'Pending') {
-                cancelBtn.classList.remove('d-none');
-            } else {
-                cancelBtn.classList.add('d-none');
-            }
+                            // Show Cancel button if status is Pending
+                            const cancelBtn = document.getElementById('cancelOrderBtn');
+                            if (order.status === 'Pending') {
+                                cancelBtn.classList.remove('d-none');
+                            } else {
+                                cancelBtn.classList.add('d-none');
+                            }
 
-            orderModal.show();
-        }
+                            orderModal.show();
+                        }
 
-        async function cancelOrder() {
-            if (!confirm('Are you sure you want to cancel this order?')) return;
+                        async function cancelOrder() {
+                            if (!confirm('Are you sure you want to cancel this order?')) return;
 
-            const result = await CustomerService.cancelOrder(currentOrderId);
-            if (result.success) {
-                alert('Order cancelled.');
-                orderModal.hide();
-                loadOrders();
-            } else {
-                alert(result.message || 'Failed to cancel order.');
-            }
-        }
+                            const result = await CustomerService.cancelOrder(currentOrderId);
+                            if (result.success) {
+                                alert('Order cancelled.');
+                                orderModal.hide();
+                                loadOrders();
+                            } else {
+                                alert(result.message || 'Failed to cancel order.');
+                            }
+                        }
 
-        async function changePassword(e) {
-            e.preventDefault();
-            const current = document.getElementById('currentPassword').value;
-            const newPass = document.getElementById('newPassword').value;
-            const confirmPass = document.getElementById('confirmNewPassword').value;
+                        async function changePassword(e) {
+                            e.preventDefault();
+                            const current = document.getElementById('currentPassword').value;
+                            const newPass = document.getElementById('newPassword').value;
+                            const confirmPass = document.getElementById('confirmNewPassword').value;
 
-            if (newPass !== confirmPass) {
-                alert('New passwords do not match.');
-                return;
-            }
+                            if (newPass !== confirmPass) {
+                                alert('New passwords do not match.');
+                                return;
+                            }
 
-            const result = await Authentication.changePassword(current, newPass);
-            if (result.success) {
-                alert('Password updated successfully.');
-                document.getElementById('changePasswordForm').reset();
-            } else {
-                alert(result.message || 'Failed to update password.');
-            }
-        }
-    </script>
-</body>
+                            const result = await Authentication.changePassword(current, newPass);
+                            if (result.success) {
+                                alert('Password updated successfully.');
+                                document.getElementById('changePasswordForm').reset();
+                            } else {
+                                alert(result.message || 'Failed to update password.');
+                            }
+                        }
+                    </script>
+                </body>
 
 </html>
