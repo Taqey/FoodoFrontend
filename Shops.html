@@ -165,7 +165,7 @@
                 result = await CustomerService.getAllShops(currentPage, pageSize);
             }
 
-            const shops = result.items || [];
+            const shops = result.Items || [];
             renderShops(shops);
             document.getElementById('pageInfo').textContent = `Page ${currentPage}`;
         }
@@ -182,10 +182,9 @@
             shops.forEach(shop => {
                 const col = document.createElement('div');
                 col.className = 'col-md-4 col-lg-3 mb-4';
-                // Assuming shop object structure. Adjust if needed.
                 const name = shop.storeName || shop.userName || 'Restaurant';
                 const desc = shop.storeDescription || 'No description available.';
-                const id = shop.id || shop.userId; // Adjust based on backend DTO
+                const id = shop.id || shop.userId;
 
                 col.innerHTML = `
                     <div class="card shop-card h-100" onclick="window.location.href='Products.html?restaurantId=${id}'">

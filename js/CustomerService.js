@@ -14,7 +14,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 };
+            return { Items: [], TotalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -32,7 +32,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 };
+            return { Items: [], TotalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -65,7 +65,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 };
+            return { Items: [], TotalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -83,7 +83,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 };
+            return { Items: [], TotalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -101,7 +101,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 };
+            return { Items: [], TotalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }
@@ -161,7 +161,7 @@ const CustomerService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 };
+            return { Items: [], TotalItems: 0 };
         } finally {
             Authentication.hideLoading();
         }

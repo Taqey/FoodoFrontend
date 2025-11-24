@@ -20,7 +20,7 @@ const MerchantService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 }; // Return empty structure on error
+            return { Items: [], TotalItems: 0 }; // Return empty structure on error
         } finally {
             Authentication.hideLoading();
         }
