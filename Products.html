@@ -167,15 +167,12 @@
         let cart = [];
         let cartModal;
 
-        const RESTAURANT_CATEGORIES = [
-            "Italian", "Chinese", "Indian", "Japanese", "Mexican", "American",
-            "French", "Thai", "Greek", "Spanish", "Lebanese", "Turkish",
-            "Vietnamese", "Korean", "Brazilian", "Vegetarian", "Vegan",
-            "GlutenFree", "FastFood", "FineDining", "CasualDining", "Cafe",
-            "Bakery", "Bar", "Pub", "FoodTruck", "StreetFood", "Seafood",
-            "Steakhouse", "Pizza", "Burger", "Sushi", "Dessert", "IceCream",
-            "JuiceBar", "Healthy", "Salad", "Sandwich", "Breakfast", "Brunch",
-            "Dinner", "Lunch", "LateNight"
+        const FOOD_CATEGORIES = [
+            "Burger", "Pizza", "Pasta", "Sandwich", "Grill", "FriedChicken",
+            "Seafood", "Salad", "Soup", "Dessert", "IceCream", "Juice",
+            "Coffee", "Beverage", "Appetizer", "MainCourse", "SideDish",
+            "Shawarma", "Kebab", "Sushi", "Tacos", "Noodles", "RiceDishes",
+            "Pastry", "Breakfast"
         ];
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -184,7 +181,7 @@
             loadCart();
 
             const filter = document.getElementById('categoryFilter');
-            RESTAURANT_CATEGORIES.sort().forEach(cat => {
+            FOOD_CATEGORIES.sort().forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat;
                 option.textContent = cat;
