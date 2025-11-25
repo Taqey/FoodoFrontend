@@ -13,23 +13,14 @@ const Authentication = {
     },
 
     clearToken: () => {
-        const keysToRemove = [
-            'accessToken', 
-            'tempUserId', 
-            'Auth', 
-            'jwt_token', 
-            'jwt_token_expiry', 
-            'token_storage_type'
-        ];
+        // Clear access token from both storage locations
+        localStorage.removeItem('accessToken');
+        sessionStorage.removeItem('accessToken');
+        localStorage.removeItem('tempUserId');
+        sessionStorage.removeItem('tempUserId');
         
-        keysToRemove.forEach(key => {
-            localStorage.removeItem(key);
-            sessionStorage.removeItem(key);
-        });
-
-        // Clear cookies with all possible path/secure variations to ensure deletion
-        document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "RefreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; secure; samesite=strict";
+        // Note: HttpOnly refresh token cookie cannot be cleared from JavaScript.
+        // It will be cleared by the backend or expire naturally.
     },
 
     isAuthenticated: () => !!Authentication.getToken(),
@@ -132,7 +123,8 @@ const Authentication = {
         try {
             const response = await fetch(`${API_BASE_URL}/login`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include' // Required to receive HttpOnly refresh token cookie
             });
 
             if (!response.ok) {
@@ -142,8 +134,11 @@ const Authentication = {
 
             const data = await response.json();
             
-            if (data.token) Authentication.setToken(data.token, rememberMe);
-            if (data.refreshToken) document.cookie = `RefreshToken=${data.refreshToken}; path=/; secure; samesite=strict`;
+            // Store access token based on Remember Me setting
+            // Refresh token is automatically set as HttpOnly cookie by backend
+            if (data.token) {
+                Authentication.setToken(data.token, rememberMe);
+            }
 
             return { success: true, role: Authentication.getUserRole() };
         } catch (error) {
