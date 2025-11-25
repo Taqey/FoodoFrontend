@@ -13,16 +13,34 @@ const paginationState = {
     customers: { page: 1, size: 10, total: 0 }
 };
 
-const RESTAURANT_CATEGORIES = [
-    "Italian", "Chinese", "Indian", "Japanese", "Mexican", "American",
-    "French", "Thai", "Greek", "Spanish", "Lebanese", "Turkish",
-    "Vietnamese", "Korean", "Brazilian", "Vegetarian", "Vegan",
-    "GlutenFree", "FastFood", "FineDining", "CasualDining", "Cafe",
-    "Bakery", "Bar", "Pub", "FoodTruck", "StreetFood", "Seafood",
-    "Steakhouse", "Pizza", "Burger", "Sushi", "Dessert", "IceCream",
-    "JuiceBar", "Healthy", "Salad", "Sandwich", "Breakfast", "Brunch",
-    "Dinner", "Lunch", "LateNight"
-];
+// FoodCategory enum mapping (matches backend enum exactly)
+const FOOD_CATEGORIES = {
+    "Burger": 1,
+    "Pizza": 2,
+    "Pasta": 3,
+    "Sandwich": 4,
+    "Grill": 5,
+    "FriedChicken": 6,
+    "Seafood": 7,
+    "Salad": 8,
+    "Soup": 9,
+    "Dessert": 10,
+    "IceCream": 11,
+    "Juice": 12,
+    "Coffee": 13,
+    "Beverage": 14,
+    "Appetizer": 15,
+    "MainCourse": 16,
+    "SideDish": 17,
+    "Shawarma": 18,
+    "Kebab": 19,
+    "Sushi": 20,
+    "Tacos": 21,
+    "Noodles": 22,
+    "RiceDishes": 23,
+    "Pastry": 24,
+    "Breakfast": 25
+};
 
 // --- Product Management Logic ---
 let currentProducts = [];
@@ -136,9 +154,12 @@ async function editProduct(id) {
 
     renderAttributesList(product.attributes, product.productId);
     
-    // Handle categories
-    // Assuming product.categories is a list of strings or objects with name
-    const currentCategories = product.categories ? product.categories.map(c => typeof c === 'string' ? c : c.name) : [];
+    // Handle categories - backend returns integers or objects with foodCategoryId
+    const currentCategories = product.categories ? product.categories.map(c => {
+        if (typeof c === 'number') return c;
+        if (c.foodCategoryId) return c.foodCategoryId;
+        return null;
+    }).filter(Boolean) : [];
     renderCategoryCheckboxes(currentCategories);
 
     productModal.show();
@@ -148,8 +169,14 @@ function renderCategoryCheckboxes(selectedCategories = []) {
     const container = document.getElementById('productCategories');
     if(!container) return;
     container.innerHTML = '';
-    RESTAURANT_CATEGORIES.forEach(cat => {
-        const isChecked = selectedCategories.includes(cat);
+    
+    // Convert selected category integers to category names for comparison
+    const selectedCategoryNames = selectedCategories.map(catId => {
+        return Object.keys(FOOD_CATEGORIES).find(key => FOOD_CATEGORIES[key] === catId);
+    }).filter(Boolean);
+    
+    Object.keys(FOOD_CATEGORIES).sort().forEach(cat => {
+        const isChecked = selectedCategoryNames.includes(cat);
         const div = document.createElement('div');
         div.className = 'form-check form-check-inline';
         div.innerHTML = `
@@ -162,7 +189,8 @@ function renderCategoryCheckboxes(selectedCategories = []) {
 
 function getSelectedCategories() {
     const checkboxes = document.querySelectorAll('.product-category-checkbox:checked');
-    return Array.from(checkboxes).map(cb => cb.value);
+    // Return enum integer values, not strings
+    return Array.from(checkboxes).map(cb => FOOD_CATEGORIES[cb.value]);
 }
 
 function renderAttributesList(attributes, productId) {
@@ -204,9 +232,13 @@ async function saveProduct() {
     if (id) {
         result = await MerchantService.updateProduct(id, productData);
         if (result.success) {
-            // Update Categories
+            // Update Categories - work with integer values
             const currentProduct = await MerchantService.getProductById(id);
-            const currentCats = currentProduct.categories ? currentProduct.categories.map(c => typeof c === 'string' ? c : c.name) : [];
+            const currentCats = currentProduct.categories ? currentProduct.categories.map(c => {
+                if (typeof c === 'number') return c;
+                if (c.foodCategoryId) return c.foodCategoryId;
+                return null;
+            }).filter(Boolean) : [];
             
             const toAdd = selectedCategories.filter(c => !currentCats.includes(c));
             const toRemove = currentCats.filter(c => !selectedCategories.includes(c));
@@ -215,6 +247,7 @@ async function saveProduct() {
             if (toRemove.length > 0) await MerchantService.removeProductCategories(id, toRemove);
         }
     } else {
+        // For create, send integer category values
         productData.categories = selectedCategories;
         result = await MerchantService.createProduct(productData);
     }

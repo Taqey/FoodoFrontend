@@ -229,34 +229,67 @@ const Authentication = {
 
     refreshToken: async () => {
         // Don't show global loading for background refresh to avoid interrupting user
-        // Authentication.showLoading(); 
         try {
             const response = await fetch(`${API_BASE_URL}/refresh-token`, {
                 method: 'POST',
-                // No Authorization header needed as we rely on the cookie now, 
-                // and the backend endpoint allows anonymous access for refresh.
-                // But we can keep it if we have a token, though it might be expired.
-                // Best to omit or send if available. The backend ignores it for auth but might use it for context if valid.
-                // Since we removed [Authorize], we don't strictly need it.
-                // However, to be safe and consistent, let's just send what we have.
-                headers: { 'Authorization': `Bearer ${Authentication.getToken()}` }
+                credentials: 'include' // Ensure cookies are sent with the request
             });
 
-            if (!response.ok) throw new Error('Refresh failed');
+            // Only return true if response is 200 OK
+            if (!response.ok) {
+                console.log('Refresh token failed with status:', response.status);
+                return false;
+            }
 
             const data = await response.json();
             if (data.token) {
+                // Preserve storage type (localStorage or sessionStorage)
                 const isLocal = !!localStorage.getItem('accessToken');
                 Authentication.setToken(data.token, isLocal);
+                console.log('Token refreshed successfully');
                 return true;
             }
             return false;
         } catch (error) {
-            console.error("Token refresh failed:", error);
+            console.error('Token refresh failed:', error);
             return false;
-        } finally {
-            // Authentication.hideLoading();
         }
+    },
+
+    tryAutoLogin: async () => {
+        // Try to auto-login using refresh token on page load
+        // This enables persistent login even after browser restart
+        const token = Authentication.getToken();
+        
+        // If no token at all, user is not logged in
+        if (!token) return false;
+        
+        // Check if token is expired
+        const exp = Authentication.getTokenExpiration(token);
+        if (!exp) return false;
+        
+        const now = Date.now();
+        const timeUntilExp = exp - now;
+        
+        // If token is still valid (not expired), user is logged in
+        if (timeUntilExp > 0) {
+            console.log('Token still valid');
+            return true;
+        }
+        
+        // Token is expired, try to refresh it
+        console.log('Token expired, attempting auto-refresh...');
+        const refreshSuccess = await Authentication.refreshToken();
+        
+        if (!refreshSuccess) {
+            // Refresh failed - log user out silently
+            console.log('Auto-refresh failed, logging out');
+            Authentication.clearToken();
+            return false;
+        }
+        
+        console.log('Auto-login successful via refresh token');
+        return true;
     },
 
     startTokenRefreshTimer: () => {
@@ -281,8 +314,9 @@ const Authentication = {
             console.log('Token expiring soon or expired, refreshing...');
             const success = await Authentication.refreshToken();
             if (!success) {
-                // Only alert and logout if we really can't refresh and the token is actually expired
+                // If refresh fails and token is expired, logout
                 if (timeUntilExp <= 0) {
+                    console.log('Session expired and refresh failed');
                     alert('Session expired. Please login again.');
                     Authentication.logout();
                 }
@@ -391,7 +425,6 @@ const Authentication = {
 
     logout: () => {
         Authentication.clearToken();
-        sessionStorage.removeItem('tempUserId');
         window.location.href = 'Login.html';
     },
 
@@ -422,8 +455,14 @@ const Authentication = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Try auto-login first (handles expired tokens via refresh)
+    await Authentication.tryAutoLogin();
+    
+    // Update header based on authentication state
     Authentication.updateHeader();
+    
+    // Start refresh timer if authenticated
     if (Authentication.isAuthenticated()) {
         Authentication.startTokenRefreshTimer();
     }
