@@ -111,9 +111,17 @@ function renderProducts(products) {
             ? p.productCategories.map(cat => `<span class="badge bg-warning text-dark me-1">${cat}</span>`).join('')
             : '<span class="text-muted">None</span>';
 
-        const attributesHtml = p.attributes ? p.attributes.map(a =>
-            `<span class="badge bg-info text-dark badge-attribute">${a.name}: ${a.value} ${a.measurementUnit || ''}</span>`
-        ).join('') : '';
+        // Backend returns productDetailAttributes (with Id field) in list view
+        const attributesHtml = p.productDetailAttributes && p.productDetailAttributes.length > 0
+            ? p.productDetailAttributes.map(a =>
+                `<span class="badge bg-info text-dark badge-attribute me-1">
+                    ${a.attributeName}: ${a.attributeValue} ${a.measurementUnit || ''}
+                    <button class="btn-close btn-close-white ms-1" style="font-size: 0.6rem;" 
+                        onclick="deleteAttribute(${p.productId}, ${a.id}, event)" 
+                        title="Remove attribute"></button>
+                </span>`
+            ).join('')
+            : '<span class="text-muted">None</span>';
 
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -211,7 +219,7 @@ function renderAttributesList(attributes, productId) {
         attributes.forEach(a => {
             const badge = document.createElement('span');
             badge.className = 'badge bg-secondary me-2 mb-2 p-2';
-            // Note: Backend doesn't return ProductDetailAttributeId, so we can't delete individual attributes
+            // Detail view uses AttributeDto which doesn't include Id - display only
             badge.innerHTML = `${a.name}: ${a.value} ${a.measurementUnit || ''}`;
             container.appendChild(badge);
         });
@@ -318,9 +326,22 @@ async function addAttribute() {
     }
 }
 
-// Note: removeAttribute function has been removed due to backend limitation.
-// The backend's AttributeDto does not include ProductDetailAttributeId, which is required for deletion.
-// Individual attribute removal is not available in the UI.
+async function deleteAttribute(productId, attributeId, event) {
+    // Prevent triggering any parent click handlers
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    
+    if (!confirm('Are you sure you want to delete this attribute?')) return;
+    
+    const result = await MerchantService.removeAttribute(productId, [attributeId]);
+    if (result.success) {
+        loadProducts(); // Reload the products list
+    } else {
+        alert(result.message || 'Failed to delete attribute');
+    }
+}
 
 // --- Order Functions ---
 
