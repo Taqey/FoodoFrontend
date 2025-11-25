@@ -101,11 +101,16 @@ function renderProducts(products) {
     tbody.innerHTML = '';
 
     if (products.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center">No products found.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center">No products found.</td></tr>';
         return;
     }
 
     products.forEach(p => {
+        // Backend returns productCategories as array of category names (strings)
+        const categoriesHtml = p.productCategories && p.productCategories.length > 0
+            ? p.productCategories.map(cat => `<span class="badge bg-warning text-dark me-1">${cat}</span>`).join('')
+            : '<span class="text-muted">None</span>';
+
         const attributesHtml = p.attributes ? p.attributes.map(a =>
             `<span class="badge bg-info text-dark badge-attribute">${a.name}: ${a.value} ${a.measurementUnit || ''}</span>`
         ).join('') : '';
@@ -115,6 +120,7 @@ function renderProducts(products) {
             <td>${p.productName}</td>
             <td>$${p.price}</td>
             <td>${p.productDescription || '-'}</td>
+            <td>${categoriesHtml}</td>
             <td>${attributesHtml}</td>
             <td>
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="editProduct('${p.productId}')"><i class="ion-ios-create"></i></button>
@@ -136,7 +142,10 @@ function openProductModal() {
     document.getElementById('productId').value = '';
     document.getElementById('productModalLabel').textContent = 'Add New Product';
     document.getElementById('attributesSection').classList.add('d-none');
+    
+    // Always render categories with empty selection for new products
     renderCategoryCheckboxes([]);
+    
     productModal.show();
 }
 
@@ -154,11 +163,13 @@ async function editProduct(id) {
 
     renderAttributesList(product.attributes, product.productId);
     
-    // Handle categories - backend returns integers or objects with foodCategoryId
-    const currentCategories = product.categories ? product.categories.map(c => {
-        if (typeof c === 'number') return c;
-        if (c.foodCategoryId) return c.foodCategoryId;
-        return null;
+    // Backend returns productCategories as array of category names (strings)
+    // We need to convert category names back to enum integers for checkboxing
+    const currentCategories = product.productCategories ? product.productCategories.map(catName => {
+        // Find the enum value for this category name
+        return Object.keys(FOOD_CATEGORIES).find(key => key === catName)
+            ? FOOD_CATEGORIES[catName]
+            : null;
     }).filter(Boolean) : [];
     renderCategoryCheckboxes(currentCategories);
 
@@ -196,16 +207,16 @@ function getSelectedCategories() {
 function renderAttributesList(attributes, productId) {
     const container = document.getElementById('attributesList');
     container.innerHTML = '';
-    if (attributes) {
+    if (attributes && attributes.length > 0) {
         attributes.forEach(a => {
             const badge = document.createElement('span');
-            badge.className = 'badge bg-secondary d-flex align-items-center gap-2 p-2';
-            badge.innerHTML = `
-                ${a.Name || a.name}: ${a.Value || a.value} ${a.MeasurementUnit || a.measurementUnit || ''}
-                <i class="ion-ios-close-circle" style="cursor:pointer" onclick="removeAttribute('${productId}', ${a.ProductDetailAttributeId || a.productDetailAttributeId})"></i>
-            `;
+            badge.className = 'badge bg-secondary me-2 mb-2 p-2';
+            // Note: Backend doesn't return ProductDetailAttributeId, so we can't delete individual attributes
+            badge.innerHTML = `${a.name}: ${a.value} ${a.measurementUnit || ''}`;
             container.appendChild(badge);
         });
+    } else {
+        container.innerHTML = '<span class="text-muted">No attributes</span>';
     }
 }
 
@@ -233,12 +244,14 @@ async function saveProduct() {
     if (id) {
         result = await MerchantService.updateProduct(id, productData);
         if (result.success) {
-            // Update Categories - work with integer values
+            // Update Categories - backend returns productCategories as category names
             const currentProduct = await MerchantService.getProductById(id);
-            const currentCats = currentProduct.categories ? currentProduct.categories.map(c => {
-                if (typeof c === 'number') return c;
-                if (c.foodCategoryId) return c.foodCategoryId;
-                return null;
+            
+            // Convert current category names to integers
+            const currentCats = currentProduct.productCategories ? currentProduct.productCategories.map(catName => {
+                return Object.keys(FOOD_CATEGORIES).find(key => key === catName)
+                    ? FOOD_CATEGORIES[catName]
+                    : null;
             }).filter(Boolean) : [];
             
             const toAdd = selectedCategories.filter(c => !currentCats.includes(c));
@@ -305,18 +318,9 @@ async function addAttribute() {
     }
 }
 
-async function removeAttribute(productId, attributeId) {
-    if (!confirm(`Remove this attribute?`)) return;
-
-    const result = await MerchantService.removeAttribute(productId, [attributeId]);
-    if (result.success) {
-        const product = await MerchantService.getProductById(productId);
-        renderAttributesList(product.attributes, productId);
-        loadProducts();
-    } else {
-        alert(result.message || 'Failed to remove attribute');
-    }
-}
+// Note: removeAttribute function has been removed due to backend limitation.
+// The backend's AttributeDto does not include ProductDetailAttributeId, which is required for deletion.
+// Individual attribute removal is not available in the UI.
 
 // --- Order Functions ---
 
@@ -343,10 +347,11 @@ function renderOrders(orders) {
 
     orders.forEach(o => {
         const row = document.createElement('tr');
-        const orderId = o.id || o.orderId;
-        const customer = o.customerName || 'Customer';
-        const date = new Date(o.orderDate || o.createdOn).toLocaleDateString();
-        const total = o.totalAmount || o.totalPrice;
+        // Backend returns MerchantOrderDto with orderId, customerName, orderDate, totalAmount, status
+        const orderId = o.orderId;
+        const customer = o.customerName || 'Unknown';
+        const date = new Date(o.orderDate).toLocaleDateString();
+        const total = o.totalAmount;
         const status = o.status;
 
         row.innerHTML = `
@@ -378,11 +383,12 @@ async function viewOrder(id) {
     const order = await MerchantService.getOrderById(id);
     if (!order) return;
 
-    const orderId = order.id || order.orderId;
+    // Backend returns MerchantOrderDto
+    const orderId = order.orderId;
     const customer = order.customerName || 'Unknown';
-    const date = new Date(order.orderDate || order.createdOn).toLocaleString();
+    const date = new Date(order.orderDate).toLocaleString();
     const status = order.status;
-    const total = order.totalAmount || order.totalPrice;
+    const total = order.totalAmount;
 
     document.getElementById('orderModalId').textContent = orderId;
     document.getElementById('orderCustomerName').textContent = customer;

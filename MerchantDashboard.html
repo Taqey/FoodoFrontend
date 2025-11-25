@@ -67,7 +67,7 @@
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
-            align-items-center;
+            align-items: center;
         }
 
         .badge-attribute {
@@ -146,6 +146,7 @@
                                     <th>Name</th>
                                     <th>Price</th>
                                     <th>Description</th>
+                                    <th>Categories</th>
                                     <th>Attributes</th>
                                     <th>Actions</th>
                                 </tr>
@@ -236,75 +237,96 @@
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
     <!-- Product Modal -->
-    <div class="modal fade" id="productModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="productModalLabel">Add Product</h5>
+                    <h5 class="modal-title" id="productModalLabel">Add New Product</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <form id="productForm">
                         <input type="hidden" id="productId">
+
                         <div class="mb-3">
-                            <label for="productName" class="form-label">Product Name</label>
+                            <label for="productName" class="form-label">Product Name *</label>
                             <input type="text" class="form-control" id="productName" required>
                         </div>
+
                         <div class="mb-3">
-                            <label for="productPrice" class="form-label">Price</label>
+                            <label for="productPrice" class="form-label">Price *</label>
                             <input type="number" step="0.01" class="form-control" id="productPrice" required>
                         </div>
+
                         <div class="mb-3">
                             <label for="productDescription" class="form-label">Description</label>
                             <textarea class="form-control" id="productDescription" rows="3"></textarea>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label">Categories</label>
+                            <div id="productCategories" class="border rounded p-3"
+                                style="max-height: 200px; overflow-y: auto;">
+                                <!-- Category checkboxes will be rendered here -->
+                            </div>
+                        </div>
+
                         <div id="attributesSection" class="d-none">
-                            <h6>Attributes</h6>
-                            <div id="attributesList" class="mb-3"></div>
-                            <div class="row g-2">
-                                <div class="col-md-4">
-                                    <input type="text" id="newAttributeName" class="form-control form-control-sm"
-                                        placeholder="Name">
+                            <hr>
+                            <h6>Manage Attributes</h6>
+                            <div class="mb-3">
+                                <label class="form-label">Current Attributes</label>
+                                <div id="attributesList" class="d-flex flex-wrap gap-2 mb-2">
+                                    <!-- Existing attributes displayed here as badges -->
                                 </div>
-                                <div class="col-md-4">
-                                    <input type="text" id="newAttributeValue" class="form-control form-control-sm"
-                                        placeholder="Value">
-                                </div>
-                                <div class="col-md-2">
-                                    <input type="text" id="newAttributeUnit" class="form-control form-control-sm"
-                                        placeholder="Unit">
-                                </div>
-                                <div class="col-md-2">
-                                    <button type="button" class="btn btn-sm btn-success w-100"
-                                        onclick="addAttribute()">Add</button>
-                                </div>
+                                <small class="text-muted">Note: Individual attribute removal is not available. You can
+                                    only add new attributes.</small>
                             </div>
 
-                            <h6 class="mt-3">Categories</h6>
-                            <div id="productCategories" class="mb-3"></div>
+                            <div class="card p-3 bg-light">
+                                <h6 class="mb-3">Add New Attribute</h6>
+                                <div class="row g-2">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="newAttributeName"
+                                            placeholder="Name (e.g., Weight)">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" id="newAttributeValue"
+                                            placeholder="Value (e.g., 500)">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="text" class="form-control" id="newAttributeUnit"
+                                            placeholder="Unit (e.g., grams)">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button type="button" class="btn btn-sm btn-success w-100"
+                                            onclick="addAttribute()">
+                                            <i class="ion-ios-add"></i> Add
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save Product</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Order Modal -->
-    <div class="modal fade" id="orderModal" tabindex="-1" aria-hidden="true">
+    <!-- Order Details Modal -->
+    <div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Order Details #<span id="orderModalId"></span></h5>
+                    <h5 class="modal-title" id="orderModalLabel">Order Details #<span id="orderModalId"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
