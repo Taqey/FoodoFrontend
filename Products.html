@@ -350,11 +350,15 @@
                 return;
             }
 
-            const merchantId = cart[0].merchantId;
-            const items = cart.map(i => ({ ProductId: i.id, Quantity: i.quantity }));
+            // Map cart items to the format expected by the backend
+            const items = cart.map(i => ({
+                ItemId: i.id,
+                ItemName: i.name,
+                Quantity: i.quantity,
+                Price: i.price
+            }));
 
             const orderData = {
-                RestaurantId: merchantId,
                 Items: items
             };
 
