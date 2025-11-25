@@ -354,24 +354,18 @@ const Authentication = {
         // This enables persistent login even after browser restart
         const token = Authentication.getToken();
         
-        // If no token at all, user is not logged in
-        if (!token) {
-            console.log('[AUTH] No token found - user not logged in');
-            return false;
+        // If no token, OR token is expired, try to refresh
+        let shouldRefresh = !token;
+
+        if (token) {
+             const exp = Authentication.getTokenExpiration(token);
+             if (!exp || Date.now() >= exp) {
+                 shouldRefresh = true;
+             }
         }
-        
-        // Check if token is expired
-        const exp = Authentication.getTokenExpiration(token);
-        if (!exp) {
-            console.log('[AUTH] Invalid token expiration');
-            return false;
-        }
-        
-        const now = Date.now();
-        
-        // If token is expired, try to refresh it immediately
-        if (now >= exp) {
-            console.log('[AUTH] Token expired on load, attempting auto-refresh...');
+
+        if (shouldRefresh) {
+            console.log('[AUTH] No valid token found on load, attempting auto-refresh via cookie...');
             const refreshSuccess = await Authentication.refreshToken();
             
             if (!refreshSuccess) {
