@@ -125,7 +125,7 @@ const Authentication = {
         if (showSpinner) Authentication.showLoading();
 
         try {
-            // 1. Check if token is about to expire before making the request
+            // 1. Check if token is expired before making the request
             await Authentication.ensureValidToken();
 
             // 2. Prepare headers
@@ -179,12 +179,16 @@ const Authentication = {
         if (!exp) return;
 
         const now = Date.now();
-        const timeUntilExp = exp - now;
         
-        // If expiring in less than 20 seconds, refresh now
-        if (timeUntilExp < 20000) {
-            console.log(`[AUTH] Token expiring soon (${Math.floor(timeUntilExp/1000)}s), refreshing before request...`);
-            await Authentication.refreshToken();
+        // If token is expired, refresh immediately
+        if (now >= exp) {
+            console.log('[AUTH] Token expired, refreshing before request...');
+            const success = await Authentication.refreshToken();
+            if (!success) {
+                console.error('[AUTH] Failed to refresh expired token, logging out.');
+                Authentication.logout();
+                throw new Error('Session expired');
+            }
         }
     },
 
@@ -279,13 +283,6 @@ const Authentication = {
     },
 
     addCategory: async (userId, categories) => {
-        // This is a one-off call usually done right after registration, 
-        // likely doesn't need full auth wrapper if user isn't fully logged in yet,
-        // but if they are, it should use it. 
-        // Assuming this is part of registration flow where we might not have token yet?
-        // Actually, looking at backend, it doesn't require [Authorize] but user ID is passed.
-        // Let's keep it simple for now.
-        
         Authentication.showLoading();
         try {
             const response = await fetch(`${API_BASE_URL}/add-category`, {
@@ -363,61 +360,25 @@ const Authentication = {
         }
         
         const now = Date.now();
-        const timeUntilExp = exp - now;
-        const minutesLeft = Math.floor(timeUntilExp / 60000);
         
-        // If token is still valid (not expired), user is logged in
-        if (timeUntilExp > 0) {
-            console.log(`[AUTH] ✓ Token still valid (${minutesLeft} minutes remaining)`);
+        // If token is expired, try to refresh it immediately
+        if (now >= exp) {
+            console.log('[AUTH] Token expired on load, attempting auto-refresh...');
+            const refreshSuccess = await Authentication.refreshToken();
+            
+            if (!refreshSuccess) {
+                // Refresh failed - log user out silently
+                console.log('[AUTH] ✗ Auto-refresh failed, logging out');
+                Authentication.clearToken();
+                return false;
+            }
+            console.log('[AUTH] ✓ Auto-login successful via refresh token');
             return true;
         }
         
-        // Token is expired, try to refresh it
-        console.log('[AUTH] Token expired, attempting auto-refresh...');
-        const refreshSuccess = await Authentication.refreshToken();
-        
-        if (!refreshSuccess) {
-            // Refresh failed - log user out silently
-            console.log('[AUTH] ✗ Auto-refresh failed, logging out');
-            Authentication.clearToken();
-            return false;
-        }
-        
-        console.log('[AUTH] ✓ Auto-login successful via refresh token');
+        // Token is valid
+        console.log('[AUTH] ✓ Token valid on load');
         return true;
-    },
-
-    startTokenRefreshTimer: () => {
-        // Start checking every 10 seconds (aggressive due to 1 min token life)
-        setInterval(Authentication.checkAndRefreshToken, 10000);
-    },
-
-    checkAndRefreshToken: async () => {
-        const token = Authentication.getToken();
-        if (!token) return;
-
-        const exp = Authentication.getTokenExpiration(token);
-        if (!exp) return;
-
-        const now = Date.now();
-        const timeUntilExp = exp - now;
-        const secondsLeft = Math.floor(timeUntilExp / 1000);
-
-        // Refresh if expiring in less than 20 seconds or already expired
-        if (timeUntilExp < 20000) {
-            console.log(`[AUTH] Token expiring soon (${secondsLeft}s left), refreshing...`);
-            const success = await Authentication.refreshToken();
-            if (!success) {
-                // If refresh fails and token is expired, logout
-                if (timeUntilExp <= 0) {
-                    console.error('[AUTH] ✗ Session expired and refresh failed - logging out');
-                    alert('Session expired. Please login again.');
-                    Authentication.logout();
-                } else {
-                    console.warn('[AUTH] ⚠ Refresh failed but token not expired yet - will retry');
-                }
-            }
-        }
     },
 
     submitForgetPasswordRequest: async (email) => {
@@ -549,9 +510,4 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Update header based on authentication state
     Authentication.updateHeader();
-    
-    // Start refresh timer if authenticated
-    if (Authentication.isAuthenticated()) {
-        Authentication.startTokenRefreshTimer();
-    }
 });
