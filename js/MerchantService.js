@@ -5,15 +5,14 @@ const MerchantService = {
     // --- Products ---
 
     getAllProducts: async (pageNumber = 1, pageSize = 10) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/get-all-products`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-all-products`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+                showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch products');
@@ -21,19 +20,14 @@ const MerchantService = {
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 }; // Return empty structure on error
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     getProductById: async (id) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/get-product-by-id/${id}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-product-by-id/${id}`, {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${Authentication.getToken()}`
-                }
+                showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch product');
@@ -41,22 +35,19 @@ const MerchantService = {
         } catch (error) {
             console.error(error);
             return null;
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     createProduct: async (productData) => {
         // productData: { productName, productDescription, price, attributes: [] }
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/create-product`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/create-product`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(productData)
+                body: JSON.stringify(productData),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -66,22 +57,19 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     updateProduct: async (id, productData) => {
         // productData: { productName, productDescription, price, attributes: [] }
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/update-product/${id}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/update-product/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(productData)
+                body: JSON.stringify(productData),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -91,41 +79,33 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     deleteProduct: async (id) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/delete-product/${id}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/delete-product/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${Authentication.getToken()}`
-                }
+                showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to delete product');
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     addAttribute: async (productId, attributesList) => {
         // attributesList: [{ name, value, measurementUnit }]
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/add-attribute?id=${productId}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/add-attribute?id=${productId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Attributes: attributesList })
+                body: JSON.stringify({ Attributes: attributesList }),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -135,22 +115,19 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     removeAttribute: async (productId, attributeIds) => {
         // attributeIds: [int, int]
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/remove-attribute?id=${productId}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/remove-attribute?id=${productId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Attributes: attributeIds })
+                body: JSON.stringify({ Attributes: attributeIds }),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -160,23 +137,20 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     // --- Orders ---
 
     getAllOrders: async (pageNumber = 1, pageSize = 10) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/get-all-orders`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-all-orders`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+                showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch orders');
@@ -184,19 +158,14 @@ const MerchantService = {
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 }; // Return empty structure on error like getAllProducts
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     getOrderById: async (id) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/get-order-by-id/${id}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-order-by-id/${id}`, {
                 method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${Authentication.getToken()}`
-                }
+                showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch order');
@@ -204,21 +173,18 @@ const MerchantService = {
         } catch (error) {
             console.error(error);
             return null;
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     updateOrderStatus: async (id, status) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/update-order-status/${id}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/update-order-status/${id}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Status: status })
+                body: JSON.stringify({ Status: status }),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -228,21 +194,18 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     getPurchasedCustomers: async (pageNumber = 1, pageSize = 10) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/get-purchased-customers`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-purchased-customers`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+                showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch customers');
@@ -250,21 +213,18 @@ const MerchantService = {
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     addProductCategories: async (productId, categories) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/add-categories/${productId}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/add-categories/${productId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Categories: categories })
+                body: JSON.stringify({ Categories: categories }),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -274,21 +234,18 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     removeProductCategories: async (productId, categories) => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${MERCHANT_API_URL}/remove-categories/${productId}`, {
+            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/remove-categories/${productId}`, {
                 method: 'PUT',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${Authentication.getToken()}`
+                    'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Categories: categories })
+                body: JSON.stringify({ Categories: categories }),
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -298,8 +255,6 @@ const MerchantService = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     }
 };

@@ -16,8 +16,6 @@ const Authentication = {
         // Clear access token from both storage locations
         localStorage.removeItem('accessToken');
         sessionStorage.removeItem('accessToken');
-        localStorage.removeItem('tempUserId');
-        sessionStorage.removeItem('tempUserId');
         
         // Note: HttpOnly refresh token cookie cannot be cleared from JavaScript.
         // It will be cleared by the backend or expire naturally.
@@ -112,6 +110,84 @@ const Authentication = {
         document.body.style.pointerEvents = 'auto';
     },
 
+    // --- Core API Wrapper ---
+    
+    /**
+     * A wrapper for fetch that handles authentication automatically.
+     * - Adds Authorization header
+     * - Checks token expiration before request
+     * - Handles 401 by refreshing and retrying
+     * - Manages loading state if requested
+     */
+    fetchWithAuth: async (url, options = {}) => {
+        const { showSpinner = false, ...fetchOptions } = options;
+        
+        if (showSpinner) Authentication.showLoading();
+
+        try {
+            // 1. Check if token is about to expire before making the request
+            await Authentication.ensureValidToken();
+
+            // 2. Prepare headers
+            const headers = new Headers(fetchOptions.headers || {});
+            const token = Authentication.getToken();
+            
+            if (token) {
+                headers.set('Authorization', `Bearer ${token}`);
+            }
+            
+            // Ensure credentials are included for cookies
+            fetchOptions.credentials = 'include';
+            fetchOptions.headers = headers;
+
+            // 3. Make the initial request
+            let response = await fetch(url, fetchOptions);
+
+            // 4. Handle 401 Unauthorized (Token might have expired during flight or check failed)
+            if (response.status === 401) {
+                console.warn('[AUTH] 401 received, attempting refresh and retry...');
+                
+                const refreshSuccess = await Authentication.refreshToken();
+                
+                if (refreshSuccess) {
+                    // Update header with new token
+                    headers.set('Authorization', `Bearer ${Authentication.getToken()}`);
+                    fetchOptions.headers = headers;
+                    
+                    // Retry request
+                    response = await fetch(url, fetchOptions);
+                } else {
+                    console.error('[AUTH] Refresh failed after 401, logging out.');
+                    Authentication.logout();
+                    throw new Error('Session expired. Please login again.');
+                }
+            }
+
+            return response;
+        } catch (error) {
+            throw error;
+        } finally {
+            if (showSpinner) Authentication.hideLoading();
+        }
+    },
+
+    ensureValidToken: async () => {
+        const token = Authentication.getToken();
+        if (!token) return;
+
+        const exp = Authentication.getTokenExpiration(token);
+        if (!exp) return;
+
+        const now = Date.now();
+        const timeUntilExp = exp - now;
+        
+        // If expiring in less than 20 seconds, refresh now
+        if (timeUntilExp < 20000) {
+            console.log(`[AUTH] Token expiring soon (${Math.floor(timeUntilExp/1000)}s), refreshing before request...`);
+            await Authentication.refreshToken();
+        }
+    },
+
     // --- API Calls ---
 
     login: async (email, password, rememberMe) => {
@@ -203,6 +279,13 @@ const Authentication = {
     },
 
     addCategory: async (userId, categories) => {
+        // This is a one-off call usually done right after registration, 
+        // likely doesn't need full auth wrapper if user isn't fully logged in yet,
+        // but if they are, it should use it. 
+        // Assuming this is part of registration flow where we might not have token yet?
+        // Actually, looking at backend, it doesn't require [Authorize] but user ID is passed.
+        // Let's keep it simple for now.
+        
         Authentication.showLoading();
         try {
             const response = await fetch(`${API_BASE_URL}/add-category`, {
@@ -305,10 +388,8 @@ const Authentication = {
     },
 
     startTokenRefreshTimer: () => {
-        // Check immediately on load
-        Authentication.checkAndRefreshToken();
-        // Then check every 30 seconds
-        setInterval(Authentication.checkAndRefreshToken, 30000);
+        // Start checking every 10 seconds (aggressive due to 1 min token life)
+        setInterval(Authentication.checkAndRefreshToken, 10000);
     },
 
     checkAndRefreshToken: async () => {
@@ -320,11 +401,11 @@ const Authentication = {
 
         const now = Date.now();
         const timeUntilExp = exp - now;
-        const minutesLeft = Math.floor(timeUntilExp / 60000);
+        const secondsLeft = Math.floor(timeUntilExp / 1000);
 
-        // Refresh if expiring in less than 2 minutes (120000 ms) or already expired
-        if (timeUntilExp < 120000) {
-            console.log(`[AUTH] Token expiring soon (${minutesLeft} min left), refreshing...`);
+        // Refresh if expiring in less than 20 seconds or already expired
+        if (timeUntilExp < 20000) {
+            console.log(`[AUTH] Token expiring soon (${secondsLeft}s left), refreshing...`);
             const success = await Authentication.refreshToken();
             if (!success) {
                 // If refresh fails and token is expired, logout
@@ -391,14 +472,10 @@ const Authentication = {
     },
 
     verifyEmailRequest: async () => {
-        Authentication.showLoading();
         try {
-            const response = await fetch(`${API_BASE_URL}/verify-email-request`, {
+            const response = await Authentication.fetchWithAuth(`${API_BASE_URL}/verify-email-request`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${Authentication.getToken()}`
-                },
-                credentials: 'include'
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -409,24 +486,18 @@ const Authentication = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
     verifyEmail: async (code) => {
-        Authentication.showLoading();
         const formData = new FormData();
         formData.append('Code', code);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/verify-email`, {
+            const response = await Authentication.fetchWithAuth(`${API_BASE_URL}/verify-email`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${Authentication.getToken()}`
-                },
                 body: formData,
-                credentials: 'include'
+                showSpinner: true
             });
 
             if (!response.ok) {
@@ -437,8 +508,6 @@ const Authentication = {
             return { success: true, message: await response.text() };
         } catch (error) {
             return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
         }
     },
 
