@@ -136,7 +136,7 @@ const Authentication = {
                 headers.set('Authorization', `Bearer ${token}`);
             }
             
-            // Ensure credentials are included for cookies
+            // CRITICAL: Always include credentials to send/receive cookies (like RefreshToken)
             fetchOptions.credentials = 'include';
             fetchOptions.headers = headers;
 
@@ -214,10 +214,14 @@ const Authentication = {
 
             const data = await response.json();
             
-            // Store access token based on Remember Me setting
-            // Refresh token is automatically set as HttpOnly cookie by backend
-            if (data.token) {
-                Authentication.setToken(data.token, rememberMe);
+            // Handle both PascalCase (backend DTO) and camelCase (default JSON serialization)
+            const token = data.token || data.Token;
+
+            if (token) {
+                Authentication.setToken(token, rememberMe);
+            } else {
+                console.error('[AUTH] Login response missing token:', data);
+                throw new Error('Invalid server response');
             }
 
             return { success: true, role: Authentication.getUserRole() };
@@ -311,7 +315,7 @@ const Authentication = {
             console.log('[AUTH] Attempting token refresh...');
             const response = await fetch(`${API_BASE_URL}/refresh-token`, {
                 method: 'POST',
-                credentials: 'include' // Ensure cookies are sent with the request
+                credentials: 'include' // CRITICAL: Ensure cookies are sent with the request
             });
 
             // Only return true if response is 200 OK
@@ -326,10 +330,14 @@ const Authentication = {
             }
 
             const data = await response.json();
-            if (data.token) {
+            
+            // Handle both PascalCase and camelCase
+            const token = data.token || data.Token;
+
+            if (token) {
                 // Preserve storage type (localStorage or sessionStorage)
                 const isLocal = !!localStorage.getItem('accessToken');
-                Authentication.setToken(data.token, isLocal);
+                Authentication.setToken(token, isLocal);
                 console.log('[AUTH] ✓ Token refreshed successfully');
                 return true;
             }
