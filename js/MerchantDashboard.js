@@ -61,6 +61,23 @@ document.addEventListener('DOMContentLoaded', () => {
     deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     orderModalInstance = new bootstrap.Modal(document.getElementById('orderModal'));
 
+    // Attach event listener for delete confirmation button
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', async () => {
+            if (productToDeleteId) {
+                const result = await MerchantService.deleteProduct(productToDeleteId);
+                if (result.success) {
+                    deleteModal.hide();
+                    loadProducts();
+                } else {
+                    alert(result.message || 'Delete failed');
+                }
+                productToDeleteId = null;
+            }
+        });
+    }
+
     loadProducts();
 });
 
@@ -286,18 +303,6 @@ function confirmDelete(id) {
     productToDeleteId = id;
     deleteModal.show();
 }
-
-document.getElementById('confirmDeleteBtn').addEventListener('click', async () => {
-    if (productToDeleteId) {
-        const result = await MerchantService.deleteProduct(productToDeleteId);
-        if (result.success) {
-            deleteModal.hide();
-            loadProducts();
-        } else {
-            alert(result.message || 'Delete failed');
-        }
-    }
-});
 
 async function addAttribute() {
     const productId = document.getElementById('productId').value;
