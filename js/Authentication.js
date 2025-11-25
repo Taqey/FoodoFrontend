@@ -349,39 +349,39 @@ const Authentication = {
         }
     },
 
-    tryAutoLogin: async () => {
-        // Try to auto-login using refresh token on page load
-        // This enables persistent login even after browser restart
-        const token = Authentication.getToken();
+    // tryAutoLogin: async () => {
+    //     // Try to auto-login using refresh token on page load
+    //     // This enables persistent login even after browser restart
+    //     const token = Authentication.getToken();
         
-        // If no token, OR token is expired, try to refresh
-        let shouldRefresh = !token;
+    //     // If no token, OR token is expired, try to refresh
+    //     let shouldRefresh = !token;
 
-        if (token) {
-             const exp = Authentication.getTokenExpiration(token);
-             if (!exp || Date.now() >= exp) {
-                 shouldRefresh = true;
-             }
-        }
+    //     if (token) {
+    //          const exp = Authentication.getTokenExpiration(token);
+    //          if (!exp || Date.now() >= exp) {
+    //              shouldRefresh = true;
+    //          }
+    //     }
 
-        if (shouldRefresh) {
-            console.log('[AUTH] No valid token found on load, attempting auto-refresh via cookie...');
-            const refreshSuccess = await Authentication.refreshToken();
+    //     if (shouldRefresh) {
+    //         console.log('[AUTH] No valid token found on load, attempting auto-refresh via cookie...');
+    //         const refreshSuccess = await Authentication.refreshToken();
             
-            if (!refreshSuccess) {
-                // Refresh failed - log user out silently
-                console.log('[AUTH] ✗ Auto-refresh failed, logging out');
-                Authentication.clearToken();
-                return false;
-            }
-            console.log('[AUTH] ✓ Auto-login successful via refresh token');
-            return true;
-        }
+    //         if (!refreshSuccess) {
+    //             // Refresh failed - log user out silently
+    //             console.log('[AUTH] ✗ Auto-refresh failed, logging out');
+    //             Authentication.clearToken();
+    //             return false;
+    //         }
+    //         console.log('[AUTH] ✓ Auto-login successful via refresh token');
+    //         return true;
+    //     }
         
-        // Token is valid
-        console.log('[AUTH] ✓ Token valid on load');
-        return true;
-    },
+    //     // Token is valid
+    //     console.log('[AUTH] ✓ Token valid on load');
+    //     return true;
+    // },
 
     submitForgetPasswordRequest: async (email) => {
         Authentication.showLoading();
@@ -506,10 +506,6 @@ const Authentication = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Try auto-login first (handles expired tokens via refresh)
-    await Authentication.tryAutoLogin();
-    
-    // Update header based on authentication state
+document.addEventListener('DOMContentLoaded', () => {
     Authentication.updateHeader();
 });
