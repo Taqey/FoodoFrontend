@@ -156,7 +156,8 @@ const Authentication = {
         try {
             const response = await fetch(`${API_BASE_URL}/register-customer`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -180,7 +181,8 @@ const Authentication = {
         try {
             const response = await fetch(`${API_BASE_URL}/register-merchant`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -206,7 +208,8 @@ const Authentication = {
             const response = await fetch(`${API_BASE_URL}/add-category`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId, restaurantCategories: categories })
+                body: JSON.stringify({ userId: userId, restaurantCategories: categories }),
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -344,7 +347,8 @@ const Authentication = {
         try {
             const response = await fetch(`${API_BASE_URL}/submit-forget-password-request`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -369,7 +373,8 @@ const Authentication = {
         try {
             const response = await fetch(`${API_BASE_URL}/reset-password`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -392,7 +397,8 @@ const Authentication = {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${Authentication.getToken()}`
-                }
+                },
+                credentials: 'include'
             });
 
             if (!response.ok) {
@@ -419,7 +425,8 @@ const Authentication = {
                 headers: {
                     'Authorization': `Bearer ${Authentication.getToken()}`
                 },
-                body: formData
+                body: formData,
+                credentials: 'include'
             });
 
             if (!response.ok) {
