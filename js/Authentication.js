@@ -230,6 +230,7 @@ const Authentication = {
     refreshToken: async () => {
         // Don't show global loading for background refresh to avoid interrupting user
         try {
+            console.log('[AUTH] Attempting token refresh...');
             const response = await fetch(`${API_BASE_URL}/refresh-token`, {
                 method: 'POST',
                 credentials: 'include' // Ensure cookies are sent with the request
@@ -237,7 +238,12 @@ const Authentication = {
 
             // Only return true if response is 200 OK
             if (!response.ok) {
-                console.log('Refresh token failed with status:', response.status);
+                const errorText = await response.text();
+                console.error('[AUTH] Refresh token failed:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    error: errorText
+                });
                 return false;
             }
 
@@ -246,12 +252,13 @@ const Authentication = {
                 // Preserve storage type (localStorage or sessionStorage)
                 const isLocal = !!localStorage.getItem('accessToken');
                 Authentication.setToken(data.token, isLocal);
-                console.log('Token refreshed successfully');
+                console.log('[AUTH] ✓ Token refreshed successfully');
                 return true;
             }
+            console.error('[AUTH] Refresh response missing token:', data);
             return false;
         } catch (error) {
-            console.error('Token refresh failed:', error);
+            console.error('[AUTH] Token refresh failed (network error):', error);
             return false;
         }
     },
@@ -262,33 +269,40 @@ const Authentication = {
         const token = Authentication.getToken();
         
         // If no token at all, user is not logged in
-        if (!token) return false;
+        if (!token) {
+            console.log('[AUTH] No token found - user not logged in');
+            return false;
+        }
         
         // Check if token is expired
         const exp = Authentication.getTokenExpiration(token);
-        if (!exp) return false;
+        if (!exp) {
+            console.log('[AUTH] Invalid token expiration');
+            return false;
+        }
         
         const now = Date.now();
         const timeUntilExp = exp - now;
+        const minutesLeft = Math.floor(timeUntilExp / 60000);
         
         // If token is still valid (not expired), user is logged in
         if (timeUntilExp > 0) {
-            console.log('Token still valid');
+            console.log(`[AUTH] ✓ Token still valid (${minutesLeft} minutes remaining)`);
             return true;
         }
         
         // Token is expired, try to refresh it
-        console.log('Token expired, attempting auto-refresh...');
+        console.log('[AUTH] Token expired, attempting auto-refresh...');
         const refreshSuccess = await Authentication.refreshToken();
         
         if (!refreshSuccess) {
             // Refresh failed - log user out silently
-            console.log('Auto-refresh failed, logging out');
+            console.log('[AUTH] ✗ Auto-refresh failed, logging out');
             Authentication.clearToken();
             return false;
         }
         
-        console.log('Auto-login successful via refresh token');
+        console.log('[AUTH] ✓ Auto-login successful via refresh token');
         return true;
     },
 
@@ -308,17 +322,20 @@ const Authentication = {
 
         const now = Date.now();
         const timeUntilExp = exp - now;
+        const minutesLeft = Math.floor(timeUntilExp / 60000);
 
         // Refresh if expiring in less than 2 minutes (120000 ms) or already expired
         if (timeUntilExp < 120000) {
-            console.log('Token expiring soon or expired, refreshing...');
+            console.log(`[AUTH] Token expiring soon (${minutesLeft} min left), refreshing...`);
             const success = await Authentication.refreshToken();
             if (!success) {
                 // If refresh fails and token is expired, logout
                 if (timeUntilExp <= 0) {
-                    console.log('Session expired and refresh failed');
+                    console.error('[AUTH] ✗ Session expired and refresh failed - logging out');
                     alert('Session expired. Please login again.');
                     Authentication.logout();
+                } else {
+                    console.warn('[AUTH] ⚠ Refresh failed but token not expired yet - will retry');
                 }
             }
         }
