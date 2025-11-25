@@ -125,7 +125,7 @@ const MerchantService = {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${Authentication.getToken()}`
                 },
-                body: JSON.stringify({ attributes: attributesList })
+                body: JSON.stringify({ Attributes: attributesList })
             });
 
             if (!response.ok) {
@@ -150,7 +150,7 @@ const MerchantService = {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${Authentication.getToken()}`
                 },
-                body: JSON.stringify({ attributes: attributeIds })
+                body: JSON.stringify({ Attributes: attributeIds })
             });
 
             if (!response.ok) {
@@ -183,7 +183,7 @@ const MerchantService = {
             return await response.json();
         } catch (error) {
             console.error(error);
-            return null;
+            return { items: [], totalItems: 0 }; // Return empty structure on error like getAllProducts
         } finally {
             Authentication.hideLoading();
         }

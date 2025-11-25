@@ -201,8 +201,8 @@ function renderAttributesList(attributes, productId) {
             const badge = document.createElement('span');
             badge.className = 'badge bg-secondary d-flex align-items-center gap-2 p-2';
             badge.innerHTML = `
-                ${a.name}: ${a.value} ${a.measurementUnit || ''}
-                <i class="ion-ios-close-circle" style="cursor:pointer" onclick="removeAttribute('${productId}', ${a.productDetailAttributeId})"></i>
+                ${a.Name || a.name}: ${a.Value || a.value} ${a.MeasurementUnit || a.measurementUnit || ''}
+                <i class="ion-ios-close-circle" style="cursor:pointer" onclick="removeAttribute('${productId}', ${a.ProductDetailAttributeId || a.productDetailAttributeId})"></i>
             `;
             container.appendChild(badge);
         });
@@ -222,10 +222,11 @@ async function saveProduct() {
     }
 
     const productData = {
-        productName: name,
-        productDescription: description,
-        price: price.toString(),
-        attributes: []
+        ProductName: name,
+        ProductDescription: description,
+        Price: price.toString(),
+        Attributes: [],
+        Categories: []  // Will be set later for create, or managed separately for update
     };
 
     let result;
@@ -248,7 +249,7 @@ async function saveProduct() {
         }
     } else {
         // For create, send integer category values
-        productData.categories = selectedCategories;
+        productData.Categories = selectedCategories;
         result = await MerchantService.createProduct(productData);
     }
 
@@ -286,9 +287,9 @@ async function addAttribute() {
     if (!name || !value) return;
 
     const attributesList = [{
-        name: name,
-        value: value,
-        measurementUnit: unit || ''
+        Name: name,
+        Value: value,
+        MeasurementUnit: unit || ''
     }];
 
     const result = await MerchantService.addAttribute(productId, attributesList);
