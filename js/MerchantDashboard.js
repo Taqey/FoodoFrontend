@@ -4,7 +4,15 @@ function showTab(tabId, linkElement) {
     document.getElementById(tabId).classList.add('active');
     document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
     linkElement.classList.add('active');
+    
+    // Load profile data when profile tab is opened
+    if (tabId === 'profile' && !currentProfile) {
+        loadProfile();
+    }
 }
+
+// --- Profile State ---
+let currentProfile = null;
 
 // --- State Management ---
 const paginationState = {
@@ -47,6 +55,7 @@ let currentProducts = [];
 let productModal;
 let deleteModal;
 let productToDeleteId = null;
+let addAddressModal;
 
 // --- Order Management Logic ---
 let currentOrders = [];
@@ -60,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     productModal = new bootstrap.Modal(document.getElementById('productModal'));
     deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     orderModalInstance = new bootstrap.Modal(document.getElementById('orderModal'));
+    addAddressModal = new bootstrap.Modal(document.getElementById('addAddressModal'));
 
     // Attach event listener for delete confirmation button
     const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
@@ -492,4 +502,165 @@ function renderCustomers(customers) {
         `;
         tbody.appendChild(row);
     });
+}
+
+// ==================== PROFILE MANAGEMENT ====================
+
+async function loadProfile() {
+    const result = await ProfileService.getMerchantProfile();
+    
+    if (result.success) {
+        currentProfile = result.data;
+        displayProfile(currentProfile);
+    } else {
+        alert('Failed to load profile: ' + result.message);
+    }
+}
+
+function displayProfile(profile) {
+    // Store Information
+    document.getElementById('profileStoreName').textContent = profile.storeName || '-';
+    document.getElementById('profileStoreDescription').textContent = profile.storeDescription || '-';
+    
+    // Contact Information
+    document.getElementById('profileEmail').textContent = profile.email;
+    document.getElementById('profileCategories').textContent = profile.categories && profile.categories.length > 0 
+        ? profile.categories.join(', ') 
+        : '-';
+    
+    // Email Verification Status
+    if (profile.isEmailConfirmed) {
+        document.getElementById('emailVerifiedBadge').innerHTML = '<span class="badge bg-success">✓ Verified</span>';
+        document.getElementById('sendVerificationBtn').style.display = 'none';
+    } else {
+        document.getElementById('emailVerifiedBadge').innerHTML = '<span class="badge bg-warning">Not Verified</span>';
+        document.getElementById('sendVerificationBtn').style.display = 'inline-block';
+    }
+    
+    // Display Addresses
+    displayAddresses(profile.adresses || []);
+}
+
+function displayAddresses(addresses) {
+    const container = document.getElementById('addressesList');
+    
+    if (!addresses || addresses.length === 0) {
+        container.innerHTML = '<p class="text-muted">No addresses added yet.</p>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    addresses.forEach(address => {
+        const card = document.createElement('div');
+        card.className = 'card mb-2 p-3';
+        // Note: Merchants don't have "Set as Default" functionality
+        card.innerHTML = `
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <p class="mb-1"><strong>${address.streetAddress}</strong></p>
+                    <p class="mb-1">${address.city}, ${address.state} ${address.postalCode}</p>
+                    <p class="mb-0">${address.country}</p>
+                </div>
+                <div>
+                    <button class="btn btn-outline-danger btn-sm" onclick="removeAddress(${address.id})">Remove</button>
+                </div>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+}
+
+// ==================== EMAIL VERIFICATION ====================
+
+async function sendVerificationCode() {
+    const result = await ProfileService.sendVerificationCode();
+    
+    if (result.success) {
+        alert('Verification code sent to your email!');
+        // Show the code input field
+        document.getElementById('sendVerificationBtn').style.display = 'none';
+        document.getElementById('verificationCodeInput').style.display = 'block';
+    } else {
+        alert('Failed to send verification code: ' + result.message);
+    }
+}
+
+async function verifyEmailCode() {
+    const code = document.getElementById('verificationCode').value.trim();
+    const errorEl = document.getElementById('verificationError');
+    
+    if (!code) {
+        errorEl.textContent = 'Please enter the verification code';
+        errorEl.classList.remove('d-none');
+        return;
+    }
+    
+    const result = await ProfileService.verifyEmailCode(code);
+    
+    if (result.success) {
+        alert('Email verified successfully!');
+        // Update UI to show verified status
+        document.getElementById('emailVerifiedBadge').innerHTML = '<span class="badge bg-success">✓ Verified</span>';
+        document.getElementById('verificationCodeInput').style.display = 'none';
+        errorEl.classList.add('d-none');
+        
+        // Update profile data
+        if (currentProfile) {
+            currentProfile.isEmailConfirmed = true;
+        }
+    } else {
+        errorEl.textContent = result.message || 'Invalid verification code';
+        errorEl.classList.remove('d-none');
+    }
+}
+
+// ==================== ADDRESS MANAGEMENT ====================
+
+function showAddAddressModal() {
+    document.getElementById('addAddressForm').reset();
+    addAddressModal.show();
+}
+
+async function addAddress() {
+    const newAddress = {
+        streetAddress: document.getElementById('newStreetAddress').value.trim(),
+        city: document.getElementById('newCity').value.trim(),
+        state: document.getElementById('newState').value.trim(),
+        postalCode: document.getElementById('newPostalCode').value.trim(),
+        country: document.getElementById('newCountry').value.trim()
+    };
+    
+    // Validation
+    if (!newAddress.streetAddress || !newAddress.city || !newAddress.state || 
+        !newAddress.postalCode || !newAddress.country) {
+        alert('Please fill in all address fields');
+        return;
+    }
+    
+    const result = await ProfileService.addMerchantAddress([newAddress]);
+    
+    if (result.success) {
+        alert('Address added successfully!');
+        addAddressModal.hide();
+        // Reload profile to get updated addresses
+        loadProfile();
+    } else {
+        alert('Failed to add address: ' + result.message);
+    }
+}
+
+async function removeAddress(addressId) {
+    if (!confirm('Are you sure you want to remove this address?')) {
+        return;
+    }
+    
+    const result = await ProfileService.deleteMerchantAddress(addressId);
+    
+    if (result.success) {
+        alert('Address removed successfully!');
+        // Reload profile to get updated addresses
+        loadProfile();
+    } else {
+        alert('Failed to remove address: ' + result.message);
+    }
 }

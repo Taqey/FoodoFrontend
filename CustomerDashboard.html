@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/Authentication.js"></script>
+    <script src="js/ProfileService.js"></script>
     <script src="js/CustomerService.js"></script>
     <style>
         .dashboard-container {
@@ -102,6 +103,9 @@
     <div class="dashboard-container">
         <div class="sidebar d-none d-md-block">
             <nav class="nav flex-column">
+                <a class="nav-link" href="#" onclick="showTab('profile', this)">
+                    <i class="ion-ios-person"></i> My Profile
+                </a>
                 <a class="nav-link active" href="#" onclick="showTab('orders', this)">
                     <i class="ion-ios-cart"></i> My Orders
                 </a>
@@ -112,6 +116,59 @@
         </div>
 
         <div class="content-area">
+
+            <div id="profile" class="tab-pane">
+                <h3>My Profile</h3>
+                <div class="card p-4 mt-3" style="max-width: 800px;">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Personal Information</h5>
+                            <p><strong>Name:</strong> <span id="profileName">Loading...</span></p>
+                            <p><strong>Gender:</strong> <span id="profileGender">-</span></p>
+                            <p><strong>Birth Date:</strong> <span id="profileBirthDate">-</span></p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="mb-3">Contact Information</h5>
+                            <p><strong>Email:</strong> <span id="profileEmail">-</span> <span
+                                    id="emailVerifiedBadge"></span></p>
+                            <p><strong>Phone:</strong> <span id="profilePhone">-</span></p>
+
+                            <!-- Email Verification Section -->
+                            <div id="emailVerificationSection" class="mt-3">
+                                <!-- Send Code Button (shown if not verified) -->
+                                <button id="sendVerificationBtn" class="btn btn-sm btn-warning"
+                                    onclick="sendVerificationCode()" style="display:none;">
+                                    Send Verification Code
+                                </button>
+
+                                <!-- Verification Code Input (shown after sending code) -->
+                                <div id="verificationCodeInput" style="display:none;" class="mt-2">
+                                    <div class="input-group input-group-sm" style="max-width: 300px;">
+                                        <input type="text" class="form-control" id="verificationCode"
+                                            placeholder="Enter code">
+                                        <button class="btn btn-success" onclick="verifyEmailCode()">Verify</button>
+                                    </div>
+                                    <small id="verificationError" class="text-danger d-none"></small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Address Management Section -->
+                    <div class="mt-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5>Addresses</h5>
+                            <button class="btn btn-primary btn-sm" onclick="showAddAddressModal()">Add New
+                                Address</button>
+                        </div>
+                        <div id="addressesList">
+                            <p class="text-muted">No addresses added yet.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <div id="orders" class="tab-pane active">
                 <h3>My Orders</h3>
@@ -164,6 +221,46 @@
                 </div>
             </div>
 
+        </div>
+    </div>
+
+    <!-- Add Address Modal -->
+    <div class="modal fade" id="addAddressModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Address</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addAddressForm">
+                        <div class="mb-3">
+                            <label class="form-label">Street Address</label>
+                            <input type="text" class="form-control" id="newStreetAddress" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">City</label>
+                            <input type="text" class="form-control" id="newCity" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">State</label>
+                            <input type="text" class="form-control" id="newState" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Postal Code</label>
+                            <input type="text" class="form-control" id="newPostalCode" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Country</label>
+                            <input type="text" class="form-control" id="newCountry" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addAddress()">Add Address</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -222,13 +319,16 @@
         const pageSize = 10;
         let currentOrders = [];
         let orderModal;
+        let addAddressModal;
         let currentOrderId = null;
+        let currentProfile = null;
 
         document.addEventListener('DOMContentLoaded', () => {
             Authentication.requireRole('Customer');
             Authentication.updateHeader();
 
             orderModal = new bootstrap.Modal(document.getElementById('orderModal'));
+            addAddressModal = new bootstrap.Modal(document.getElementById('addAddressModal'));
 
             loadOrders();
 
@@ -247,7 +347,187 @@
                 document.querySelectorAll('.sidebar .nav-link').forEach(link => link.classList.remove('active'));
                 linkElement.classList.add('active');
             }
+
+            // Load profile data when profile tab is opened
+            if (tabId === 'profile' && !currentProfile) {
+                loadProfile();
+            }
         }
+
+        // ==================== PROFILE MANAGEMENT ====================
+
+        async function loadProfile() {
+            const result = await ProfileService.getCustomerProfile();
+
+            if (result.success) {
+                currentProfile = result.data;
+                displayProfile(currentProfile);
+            } else {
+                alert('Failed to load profile: ' + result.message);
+            }
+        }
+
+        function displayProfile(profile) {
+            // Personal Information
+            document.getElementById('profileName').textContent = `${profile.firstName} ${profile.lastName}`;
+            document.getElementById('profileGender').textContent = profile.gender || '-';
+            document.getElementById('profileBirthDate').textContent = profile.birthDate || '-';
+
+            // Contact Information
+            document.getElementById('profileEmail').textContent = profile.email;
+            document.getElementById('profilePhone').textContent = profile.phoneNumber || '-';
+
+            // Email Verification Status
+            if (profile.isEmailConfirmed) {
+                document.getElementById('emailVerifiedBadge').innerHTML = '<span class="badge bg-success">✓ Verified</span>';
+                document.getElementById('sendVerificationBtn').style.display = 'none';
+            } else {
+                document.getElementById('emailVerifiedBadge').innerHTML = '<span class="badge bg-warning">Not Verified</span>';
+                document.getElementById('sendVerificationBtn').style.display = 'inline-block';
+            }
+
+            // Display Addresses
+            displayAddresses(profile.adresses || []);
+        }
+
+        function displayAddresses(addresses) {
+            const container = document.getElementById('addressesList');
+
+            if (!addresses || addresses.length === 0) {
+                container.innerHTML = '<p class="text-muted">No addresses added yet.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            addresses.forEach(address => {
+                const card = document.createElement('div');
+                card.className = 'card mb-2 p-3';
+                card.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <p class="mb-1"><strong>${address.streetAddress}</strong></p>
+                            <p class="mb-1">${address.city}, ${address.state} ${address.postalCode}</p>
+                            <p class="mb-0">${address.country}</p>
+                            ${address.isDefault ? '<span class="badge bg-primary mt-1">Default</span>' : ''}
+                        </div>
+                        <div class="btn-group-vertical btn-group-sm">
+                            ${!address.isDefault ? `<button class="btn btn-outline-primary btn-sm" onclick="setAsDefault(${address.id})">Set as Default</button>` : ''}
+                            <button class="btn btn-outline-danger btn-sm" onclick="removeAddress(${address.id})">Remove</button>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ==================== EMAIL VERIFICATION ====================
+
+        async function sendVerificationCode() {
+            const result = await ProfileService.sendVerificationCode();
+
+            if (result.success) {
+                alert('Verification code sent to your email!');
+                // Show the code input field
+                document.getElementById('sendVerificationBtn').style.display = 'none';
+                document.getElementById('verificationCodeInput').style.display = 'block';
+            } else {
+                alert('Failed to send verification code: ' + result.message);
+            }
+        }
+
+        async function verifyEmailCode() {
+            const code = document.getElementById('verificationCode').value.trim();
+            const errorEl = document.getElementById('verificationError');
+
+            if (!code) {
+                errorEl.textContent = 'Please enter the verification code';
+                errorEl.classList.remove('d-none');
+                return;
+            }
+
+            const result = await ProfileService.verifyEmailCode(code);
+
+            if (result.success) {
+                alert('Email verified successfully!');
+                // Update UI to show verified status
+                document.getElementById('emailVerifiedBadge').innerHTML = '<span class="badge bg-success">✓ Verified</span>';
+                document.getElementById('verificationCodeInput').style.display = 'none';
+                errorEl.classList.add('d-none');
+
+                // Update profile data
+                if (currentProfile) {
+                    currentProfile.isEmailConfirmed = true;
+                }
+            } else {
+                errorEl.textContent = result.message || 'Invalid verification code';
+                errorEl.classList.remove('d-none');
+            }
+        }
+
+        // ==================== ADDRESS MANAGEMENT ====================
+
+        function showAddAddressModal() {
+            document.getElementById('addAddressForm').reset();
+            addAddressModal.show();
+        }
+
+        async function addAddress() {
+            const newAddress = {
+                streetAddress: document.getElementById('newStreetAddress').value.trim(),
+                city: document.getElementById('newCity').value.trim(),
+                state: document.getElementById('newState').value.trim(),
+                postalCode: document.getElementById('newPostalCode').value.trim(),
+                country: document.getElementById('newCountry').value.trim()
+            };
+
+            // Validation
+            if (!newAddress.streetAddress || !newAddress.city || !newAddress.state ||
+                !newAddress.postalCode || !newAddress.country) {
+                alert('Please fill in all address fields');
+                return;
+            }
+
+            const result = await ProfileService.addCustomerAddress([newAddress]);
+
+            if (result.success) {
+                alert('Address added successfully!');
+                addAddressModal.hide();
+                // Reload profile to get updated addresses
+                loadProfile();
+            } else {
+                alert('Failed to add address: ' + result.message);
+            }
+        }
+
+        async function removeAddress(addressId) {
+            if (!confirm('Are you sure you want to remove this address?')) {
+                return;
+            }
+
+            const result = await ProfileService.deleteCustomerAddress(addressId);
+
+            if (result.success) {
+                alert('Address removed successfully!');
+                // Reload profile to get updated addresses
+                loadProfile();
+            } else {
+                alert('Failed to remove address: ' + result.message);
+            }
+        }
+
+        async function setAsDefault(addressId) {
+            const result = await ProfileService.setDefaultAddress(addressId);
+
+            if (result.success) {
+                alert('Default address updated!');
+                // Reload profile to get updated addresses
+                loadProfile();
+            } else {
+                alert('Failed to set default address: ' + result.message);
+            }
+        }
+
+        // ==================== ORDERS ====================
 
         async function loadOrders() {
             const result = await CustomerService.getAllOrders(currentPage, pageSize);
