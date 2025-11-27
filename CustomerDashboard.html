@@ -284,6 +284,12 @@
                         </div>
                     </div>
 
+                    <!-- Delivery Address Section -->
+                    <div class="mb-4">
+                        <h6>Delivery Address</h6>
+                        <p class="mb-0" id="orderDeliveryAddress">-</p>
+                    </div>
+
                     <h6>Items</h6>
                     <div class="table-responsive mb-3">
                         <table class="table table-sm table-bordered">
@@ -604,6 +610,9 @@
             document.getElementById('orderDate').textContent = new Date(order.orderDate).toLocaleString();
             document.getElementById('orderStatusDisplay').textContent = order.status;
             document.getElementById('orderTotalAmount').textContent = '$' + order.totalAmount;
+
+            // Display delivery address
+            document.getElementById('orderDeliveryAddress').textContent = order.billingAddress || 'No address information';
 
             const tbody = document.getElementById('orderItemsTableBody');
             tbody.innerHTML = '';

@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/Authentication.js"></script>
+    <script src="js/ProfileService.js"></script>
     <script src="js/CustomerService.js"></script>
     <style>
         .product-card {
@@ -156,6 +157,31 @@
         </div>
     </div>
 
+    <!-- Checkout Confirmation Modal -->
+    <div class="modal fade" id="checkoutConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delivery Address</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="checkoutAddressContent">
+                        <p class="text-center"><span class="spinner-border spinner-border-sm"></span> Loading address...
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-warning" id="updateAddressBtn" onclick="goToProfile()">No,
+                        Update Address</button>
+                    <button type="button" class="btn btn-primary" id="confirmOrderBtn"
+                        onclick="confirmAndPlaceOrder()">Yes, Place Order</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentPage = 1;
         const pageSize = 12;
@@ -163,6 +189,7 @@
         let currentRestaurantId = null;
         let cart = [];
         let cartModal;
+        let checkoutConfirmModal;
 
         // FoodCategory enum values (string name => integer value)
         const FOOD_CATEGORIES = {
@@ -176,6 +203,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             Authentication.updateHeader();
             cartModal = new bootstrap.Modal(document.getElementById('cartModal'));
+            checkoutConfirmModal = new bootstrap.Modal(document.getElementById('checkoutConfirmModal'));
             loadCart();
 
             const filter = document.getElementById('categoryFilter');
@@ -350,6 +378,54 @@
                 return;
             }
 
+            // Close cart modal and show confirmation modal
+            cartModal.hide();
+
+            // Show confirmation modal with loading state
+            checkoutConfirmModal.show();
+            document.getElementById('checkoutAddressContent').innerHTML =
+                '\u003cp class=\"text-center\"\u003e\u003cspan class=\"spinner-border spinner-border-sm\"\u003e\u003c/span\u003e Loading address...\u003c/p\u003e';
+
+            // Fetch user profile to get default address
+            const profileResult = await ProfileService.getCustomerProfile();
+
+            if (!profileResult.success) {
+                document.getElementById('checkoutAddressContent').innerHTML =
+                    `\u003cdiv class=\"alert alert-danger\"\u003eFailed to load address information. Please try again.\u003c/div\u003e`;
+                document.getElementById('confirmOrderBtn').disabled = true;
+                return;
+            }
+
+            const profile = profileResult.data;
+            const defaultAddress = profile.adresses?.find(addr => addr.isDefault);
+
+            if (!defaultAddress) {
+                document.getElementById('checkoutAddressContent').innerHTML = `
+                    \u003cdiv class=\"alert alert-warning\"\u003e
+                        \u003ch6\u003eNo Default Address Set\u003c/h6\u003e
+                        \u003cp class=\"mb-0\"\u003eYou need to set a default address before placing an order. Please go to your profile and add a default address.\u003c/p\u003e
+                    \u003c/div\u003e
+                `;
+                document.getElementById('confirmOrderBtn').disabled = true;
+                document.getElementById('updateAddressBtn').textContent = 'Go to Profile';
+                return;
+            }
+
+            // Display default address and ask for confirmation
+            document.getElementById('checkoutAddressContent').innerHTML = `
+                \u003cdiv\u003e
+                    \u003ch6\u003eDo you want to use your default address for delivery?\u003c/h6\u003e
+                    \u003cdiv class=\"card p-3 mt-3 bg-light\"\u003e
+                        \u003cp class=\"mb-1\"\u003e\u003cstrong\u003e${defaultAddress.streetAddress}\u003c/strong\u003e\u003c/p\u003e
+                        \u003cp class=\"mb-1\"\u003e${defaultAddress.city}, ${defaultAddress.state} ${defaultAddress.postalCode}\u003c/p\u003e
+                        \u003cp class=\"mb-0\"\u003e${defaultAddress.country}\u003c/p\u003e
+                    \u003c/div\u003e
+                \u003c/div\u003e
+            `;
+            document.getElementById('confirmOrderBtn').disabled = false;
+        }
+
+        async function confirmAndPlaceOrder() {
             // Map cart items to the format expected by the backend
             const items = cart.map(i => ({
                 ItemId: i.id,
@@ -366,11 +442,17 @@
             if (result.success) {
                 alert('Order placed successfully!');
                 clearCart();
-                cartModal.hide();
+                checkoutConfirmModal.hide();
                 window.location.href = 'CustomerDashboard.html#orders';
             } else {
                 alert(result.message || 'Failed to place order.');
             }
+        }
+
+        function goToProfile() {
+            // Store return flag in sessionStorage so we can redirect back after address update
+            sessionStorage.setItem('returnToCheckout', 'true');
+            window.location.href = 'CustomerDashboard.html#profile';
         }
     </script>
 </body>
