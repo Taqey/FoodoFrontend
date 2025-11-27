@@ -56,15 +56,26 @@ const Authentication = {
     },
 
     requireRole: (requiredRole) => {
+        const currentRole = Authentication.getUserRole();
+        
+        // Not logged in → redirect to login
         if (!Authentication.isAuthenticated()) {
             window.location.href = 'Login.html';
             return;
         }
 
-        const role = Authentication.getUserRole();
-        if (role !== requiredRole) {
-            alert('Access Denied – Only merchants are allowed to view this page.');
-            window.location.href = 'index.html';
+        // Logged in but wrong role → redirect to appropriate dashboard
+        if (currentRole !== requiredRole) {
+            if (currentRole === 'Merchant') {
+                // Merchant trying to access customer page → redirect to merchant dashboard
+                window.location.href = 'MerchantDashboard.html';
+            } else if (currentRole === 'Customer') {
+                // Customer trying to access merchant page → redirect to customer dashboard
+                window.location.href = 'CustomerDashboard.html';
+            } else {
+                // Unknown role → redirect to login
+                window.location.href = 'Login.html';
+            }
         }
     },
 
@@ -469,6 +480,29 @@ const Authentication = {
             }
 
             return { success: true, message: await response.text() };
+        } catch (error) {
+            return { success: false, message: error.message };
+        }
+    },
+
+    changePassword: async (currentPassword, newPassword) => {
+        const formData = new FormData();
+        formData.append('CurrentPassword', currentPassword);
+        formData.append('NewPassword', newPassword);
+
+        try {
+            const response = await Authentication.fetchWithAuth(`${API_BASE_URL}/change-password`, {
+                method: 'POST',
+                body: formData,
+                showSpinner: true
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to change password');
+            }
+
+            return { success: true, message: 'Password changed successfully' };
         } catch (error) {
             return { success: false, message: error.message };
         }

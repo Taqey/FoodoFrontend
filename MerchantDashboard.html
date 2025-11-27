@@ -14,6 +14,8 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/config.js"></script>
     <script src="js/Authentication.js"></script>
+    <script src="js/ProductAttributes.js"></script>
+    <script src="js/WizardFunctions.js"></script>
     <script src="js/ProfileService.js"></script>
     <script src="js/MerchantService.js"></script>
     <script src="js/MerchantDashboard.js"></script>
@@ -124,6 +126,9 @@
                 </a>
                 <a class="nav-link" href="#" onclick="showTab('customers', this); loadCustomers()">
                     <i class="ion-ios-people"></i> Customers
+                </a>
+                <a class="nav-link" href="#" onclick="showTab('security', this)">
+                    <i class="ion-ios-lock"></i> Security
                 </a>
             </nav>
         </div>
@@ -291,6 +296,28 @@
                     </div>
                 </div>
             </div>
+
+            <div id="security" class="tab-pane">
+                <h3>Security</h3>
+                <div class="card p-4 mt-3" style="max-width: 500px;">
+                    <h5>Change Password</h5>
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label class="form-label">Current Password</label>
+                            <input type="password" class="form-control" id="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">New Password</label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Confirm New Password</label>
+                            <input type="password" class="form-control" id="confirmNewPassword" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Update Password</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -334,82 +361,142 @@
         </div>
     </div>
 
-    <!-- Product Modal -->
+    <!-- Product Wizard Modal -->
     <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="productModalLabel">Add New Product</h5>
+                    <div>
+                        <h5 class="modal-title" id="productModalLabel">Add New Product</h5>
+                        <small class="text-muted" id="wizardStepIndicator">Step 1 of 4</small>
+                    </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="productForm">
-                        <input type="hidden" id="productId">
-
+                    <!-- Step 1: Basic Information -->
+                    <div id="wizardStep1" class="wizard-step">
+                        <h6 class="mb-3">Basic Information</h6>
                         <div class="mb-3">
                             <label for="productName" class="form-label">Product Name *</label>
                             <input type="text" class="form-control" id="productName" required>
                         </div>
-
                         <div class="mb-3">
                             <label for="productPrice" class="form-label">Price *</label>
                             <input type="number" step="0.01" class="form-control" id="productPrice" required>
                         </div>
-
                         <div class="mb-3">
                             <label for="productDescription" class="form-label">Description</label>
                             <textarea class="form-control" id="productDescription" rows="3"></textarea>
                         </div>
+                    </div>
 
-                        <div class="mb-3">
-                            <label class="form-label">Categories</label>
-                            <div id="productCategories" class="border rounded p-3"
-                                style="max-height: 200px; overflow-y: auto;">
-                                <!-- Category checkboxes will be rendered here -->
-                            </div>
+                    <!-- Step 2: Categories (Multi-Select) -->
+                    <div id="wizardStep2" class="wizard-step d-none">
+                        <h6 class="mb-3">Select Categories (Select at least one)</h6>
+                        <p class="text-muted small">Your product can belong to multiple categories</p>
+                        <div id="categoryCheckboxes" class="row">
+                            <!-- Category checkboxes will be rendered here -->
                         </div>
+                    </div>
 
-                        <div id="attributesSection" class="d-none">
-                            <hr>
-                            <h6>Manage Attributes</h6>
-                            <div class="mb-3">
-                                <label class="form-label">Current Attributes</label>
-                                <div id="attributesList" class="d-flex flex-wrap gap-2 mb-2">
-                                    <!-- Existing attributes displayed here as badges -->
-                                </div>
-                                <small class="text-muted">Note: To remove attributes, use the delete buttons (×) in the
-                                    product list table.</small>
-                            </div>
-
-                            <div class="card p-3 bg-light">
-                                <h6 class="mb-3">Add New Attribute</h6>
-                                <div class="row g-2">
-                                    <div class="col-md-4">
-                                        <input type="text" class="form-control" id="newAttributeName"
-                                            placeholder="Name (e.g., Weight)">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" class="form-control" id="newAttributeValue"
-                                            placeholder="Value (e.g., 500)">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="text" class="form-control" id="newAttributeUnit"
-                                            placeholder="Unit (e.g., grams)">
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-sm btn-success w-100"
-                                            onclick="addAttribute()">
-                                            <i class="ion-ios-add"></i> Add
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                    <!-- Step 3: Attributes (Dynamic based on categories) -->
+                    <div id="wizardStep3" class="wizard-step d-none">
+                        <h6 class="mb-3">Product Attributes</h6>
+                        <p class="text-muted small">Select relevant attributes for your product</p>
+                        <div id="availableAttributes">
+                            <!-- Dynamic attributes will be rendered here -->
                         </div>
-                    </form>
+                    </div>
+
+                    <!-- Step 4: Review & Confirm -->
+                    <div id="wizardStep4" class="wizard-step d-none">
+                        <h6 class="mb-3">Review & Confirm</h6>
+                        <div class="card p-3">
+                            <h6 class="card-title">Product Details</h6>
+                            <table class="table table-sm">
+                                <tr>
+                                    <td class="fw-bold" style="width: 150px;">Name:</td>
+                                    <td id="reviewName"></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Price:</td>
+                                    <td id="reviewPrice"></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Description:</td>
+                                    <td id="reviewDescription"></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Categories:</td>
+                                    <td id="reviewCategories"></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Attributes:</td>
+                                    <td id="reviewAttributes"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" onclick="saveProduct()">Save Product</button>
+                    <button type="button" id="wizardPrevBtn" class="btn btn-outline-secondary d-none"
+                        onclick="previousWizardStep()">Previous</button>
+                    <button type="button" id="wizardNextBtn" class="btn btn-primary"
+                        onclick="nextWizardStep()">Next</button>
+                    <button type="button" id="wizardSubmitBtn" class="btn btn-success d-none"
+                        onclick="submitWizardProduct()">Create Product</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Product Modal (Traditional Form) -->
+    <div class="modal fade" id="editProductModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editProductId">
+
+                    <div class="mb-3">
+                        <label for="editProductName" class="form-label">Product Name *</label>
+                        <input type="text" class="form-control" id="editProductName" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editProductPrice" class="form-label">Price *</label>
+                        <input type="number" step="0.01" class="form-control" id="editProductPrice" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="editProductDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editProductDescription" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Categories</label>
+                        <div id="editProductCategories" class="border rounded p-3"
+                            style="max-height: 200px; overflow-y: auto;">
+                            <!-- Category checkboxes will be rendered here -->
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Current Attributes</label>
+                        <div id="editAttributesList" class="d-flex flex-wrap gap-2 mb-2">
+                            <!-- Existing attributes displayed here as badges -->
+                        </div>
+                        <small class="text-muted">Note: To modify attributes, delete and re-add them after
+                            saving.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditedProduct()">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -461,10 +548,8 @@
                         <label for="orderStatusSelect" class="form-label">Update Status</label>
                         <div class="d-flex gap-2">
                             <select class="form-select" id="orderStatusSelect">
-                                <option value="Pending">Pending</option>
-                                <option value="InProgress">In Progress</option>
-                                <option value="OutForDelivery">Out For Delivery</option>
-                                <option value="Completed">Completed</option>
+                                <!--Merchants can ONLY update to Processing or Cancelled -->
+                                <option value="Processing">Processing</option>
                                 <option value="Cancelled">Cancelled</option>
                             </select>
                             <button class="btn btn-primary" onclick="updateOrderStatus()">Update</button>

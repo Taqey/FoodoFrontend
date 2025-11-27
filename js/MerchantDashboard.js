@@ -50,9 +50,25 @@ const FOOD_CATEGORIES = {
     "Breakfast": 25
 };
 
+// Wizard State for Product Creation
+const wizardState = {
+    currentStep: 1,
+    totalSteps: 4,
+    productData: {
+        name: '',
+        price: '',
+        description: '',
+        selectedCategories: [],  // Array of category names (strings)
+        selectedCategoryIds: [], // Array of FoodCategory enum integers
+        selectedAttributes: []   // Array of {name, value, measurementUnit}
+    }
+};
+
+
 // --- Product Management Logic ---
 let currentProducts = [];
 let productModal;
+let editProductModal;
 let deleteModal;
 let productToDeleteId = null;
 let addAddressModal;
@@ -67,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize Bootstrap modals
     productModal = new bootstrap.Modal(document.getElementById('productModal'));
+    editProductModal = new bootstrap.Modal(document.getElementById('editProductModal'));
     deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
     orderModalInstance = new bootstrap.Modal(document.getElementById('orderModal'));
     addAddressModal = new bootstrap.Modal(document.getElementById('addAddressModal'));
@@ -84,6 +101,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(result.message || 'Delete failed');
                 }
                 productToDeleteId = null;
+            }
+        });
+    }
+
+    // Attach event listener for change password form
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const current = document.getElementById('currentPassword').value;
+            const newPass = document.getElementById('newPassword').value;
+            const confirmPass = document.getElementById('confirmNewPassword').value;
+
+            if (newPass !== confirmPass) {
+                alert('New passwords do not match.');
+                return;
+            }
+
+            const result = await Authentication.changePassword(current, newPass);
+            if (result.success) {
+                alert('Password updated successfully.');
+                changePasswordForm.reset();
+            } else {
+                alert(result.message || 'Failed to update password.');
             }
         });
     }
@@ -172,43 +213,98 @@ function filterProducts() {
     renderProducts(filtered);
 }
 
-function openProductModal() {
-    document.getElementById('productForm').reset();
-    document.getElementById('productId').value = '';
-    document.getElementById('productModalLabel').textContent = 'Add New Product';
-    document.getElementById('attributesSection').classList.add('d-none');
-    
-    // Always render categories with empty selection for new products
-    renderCategoryCheckboxes([]);
-    
-    productModal.show();
-}
+// openProductModal is now defined in WizardFunctions.js
 
 async function editProduct(id) {
     const product = await MerchantService.getProductById(id);
     if (!product) return;
 
-    document.getElementById('productId').value = product.productId;
-    document.getElementById('productName').value = product.productName;
-    document.getElementById('productPrice').value = product.price;
-    document.getElementById('productDescription').value = product.productDescription;
+    // Populate edit modal fields
+    document.getElementById('editProductId').value = product.productId;
+    document.getElementById('editProductName').value = product.productName;
+    document.getElementById('editProductPrice').value = product.price;
+    document.getElementById('editProductDescription').value = product.productDescription;
 
-    document.getElementById('productModalLabel').textContent = 'Edit Product';
-    document.getElementById('attributesSection').classList.remove('d-none');
-
-    renderAttributesList(product.attributes, product.productId);
+    // Render attributes (read-only display)
+    renderEditAttributesList(product.attributes);
     
+    // Render categories with current selections
     // Backend returns productCategories as array of category names (strings)
-    // We need to convert category names back to enum integers for checkboxing
-    const currentCategories = product.productCategories ? product.productCategories.map(catName => {
-        // Find the enum value for this category name
-        return Object.keys(FOOD_CATEGORIES).find(key => key === catName)
-            ? FOOD_CATEGORIES[catName]
-            : null;
-    }).filter(Boolean) : [];
-    renderCategoryCheckboxes(currentCategories);
+    const currentCategoryNames = product.productCategories || [];
+    renderEditCategoryCheckboxes(currentCategoryNames);
 
-    productModal.show();
+    editProductModal.show();
+}
+
+function renderEditCategoryCheckboxes(selectedCategoryNames = []) {
+    const container = document.getElementById('editProductCategories');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    Object.keys(FOOD_CATEGORIES).sort().forEach(cat => {
+        const isChecked = selectedCategoryNames.includes(cat);
+        const div = document.createElement('div');
+        div.className = 'form-check form-check-inline';
+        div.innerHTML = `
+            <input class="form-check-input edit-category-checkbox" type="checkbox" value="${cat}" id="edit_cat_${cat}" ${isChecked ? 'checked' : ''}>
+            <label class="form-check-label" for="edit_cat_${cat}">${cat}</label>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function renderEditAttributesList(attributes) {
+    const container = document.getElementById('editAttributesList');
+    container.innerHTML = '';
+    if (attributes && attributes.length > 0) {
+        attributes.forEach(a => {
+            const badge = document.createElement('span');
+            badge.className = 'badge bg-secondary me-2 mb-2 p-2';
+            badge.innerHTML = `${a.name}: ${a.value} ${a.measurementUnit || ''}`;
+            container.appendChild(badge);
+        });
+    } else {
+        container.innerHTML = '<span class="text-muted">No attributes</span>';
+    }
+}
+
+async function saveEditedProduct() {
+    const id = document.getElementById('editProductId').value;
+    const name = document.getElementById('editProductName').value.trim();
+    const price = document.getElementById('editProductPrice').value;
+    const description = document.getElementById('editProductDescription').value.trim();
+
+    if (!name || !price) {
+        alert('Please fill in Product Name and Price.');
+        return;
+    }
+
+    // Get selected categories
+    const selectedCategories = [];
+    document.querySelectorAll('.edit-category-checkbox:checked').forEach(cb => {
+        selectedCategories.push(FOOD_CATEGORIES[cb.value]);
+    });
+
+    if (selectedCategories.length === 0) {
+        alert('Please select at least one category.');
+        return;
+    }
+
+    const payload = {
+        ProductName: name,
+        ProductDescription: description,
+        Price: price.toString()
+    };
+
+    const result = await MerchantService.updateProduct(id, payload);
+
+    if (result.success) {
+        alert('Product updated successfully!');
+        editProductModal.hide();
+        loadProducts();
+    } else {
+        alert(result.message || 'Failed to update product');
+    }
 }
 
 function renderCategoryCheckboxes(selectedCategories = []) {
