@@ -173,6 +173,12 @@ function renderAttributesInWizard() {
     relevantAttributes.forEach((attr, index) => {
         const card = document.createElement('div');
         card.className = 'card mb-3 p-3';
+        
+        // Build dropdown options from commonValues
+        const optionsHtml = attr.commonValues.map(val => 
+            `<option value="${val}">${val}</option>`
+        ).join('');
+        
         card.innerHTML = `
             <div class="row align-items-center">
                 <div class="col-md-1">
@@ -184,9 +190,10 @@ function renderAttributesInWizard() {
                     <small class="text-muted d-block">Unit: ${attr.measurementUnit}</small>
                 </div>
                 <div class="col-md-5">
-                    <input type="text" class="form-control form-control-sm" 
-                        id="attrValue_${index}" placeholder="Enter value" disabled>
-                    <small class="text-muted">Common: ${attr.commonValues.slice(0, 3).join(', ')}</small>
+                    <select class="form-select form-select-sm" 
+                        id="attrValue_${index}" disabled>
+                        ${optionsHtml}
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <code class="small">${attr.measurementUnit}</code>
