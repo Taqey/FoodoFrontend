@@ -368,7 +368,7 @@
                 <div class="modal-header">
                     <div>
                         <h5 class="modal-title" id="productModalLabel">Add New Product</h5>
-                        <small class="text-muted" id="wizardStepIndicator">Step 1 of 4</small>
+                        <small class="text-muted" id="wizardStepIndicator">Step 1 of 5</small>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -408,12 +408,40 @@
                         </div>
                     </div>
 
-                    <!-- Step 4: Review & Confirm -->
+                    <!-- Step 4: Upload Product Images -->
                     <div id="wizardStep4" class="wizard-step d-none">
-                        <h6 class="mb-3">Review & Confirm</h6>
+                        <h6 class="mb-3">Upload Product Images</h6>
+                        <p class="text-muted small">Add multiple images to showcase your product</p>
+
+                        <div class="mb-3">
+                            <label class="form-label">Select Images (Multiple allowed)</label>
+                            <input type="file" class="form-control" id="productImagesInput"
+                                accept="image/png,image/jpeg,image/jpg" multiple>
+                            <small class="text-muted">Maximum 5 images, 5MB each</small>
+                        </div>
+
+                        <div id="imagePreviewContainer" class="row mt-3">
+                            <!-- Image previews will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Step 5: Select Main Image & Review -->
+                    <div id="wizardStep5" class="wizard-step d-none">
+                        <h6 class="mb-3">Select Main Image & Review</h6>
+
+                        <div class="mb-4" id="mainImageSelection">
+                            <label class="form-label fw-bold">Choose Main Image:</label>
+                            <p class="text-muted small">This image will be displayed in product listings</p>
+                            <div id="mainImageOptions" class="row">
+                                <!-- Radio buttons for main image selection will be rendered here -->
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <h6 class="mb-3">Product Summary</h6>
                         <div class="card p-3">
-                            <h6 class="card-title">Product Details</h6>
-                            <table class="table table-sm">
+                            <table class="table table-sm mb-0">
                                 <tr>
                                     <td class="fw-bold" style="width: 150px;">Name:</td>
                                     <td id="reviewName"></td>
@@ -433,6 +461,10 @@
                                 <tr>
                                     <td class="fw-bold">Attributes:</td>
                                     <td id="reviewAttributes"></td>
+                                </tr>
+                                <tr>
+                                    <td class="fw-bold">Images:</td>
+                                    <td id="reviewImages">None</td>
                                 </tr>
                             </table>
                         </div>

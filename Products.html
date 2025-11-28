@@ -265,19 +265,29 @@
                 const col = document.createElement('div');
                 col.className = 'col-md-4 col-lg-3 mb-4';
 
+                //Get main image or first image
+                const mainImage = p.urls?.find(u => u.isMain)?.url || p.urls?.[0]?.url || '';
+
+                const imageHtml = mainImage
+                    ? `<img src="${mainImage}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="${p.productName}">`
+                    : `<div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
+                           <i class="ion-ios-restaurant" style="font-size: 3rem; color: #ddd;"></i>
+                       </div>`;
+
                 const attributesHtml = p.attributes ? p.attributes.map(a =>
                     `<small class="text-muted d-block">${a.name}: ${a.value}</small>`
                 ).join('') : '';
 
                 col.innerHTML = `
-                    <div class="card product-card h-100">
+                    <div class="card product-card h-100" style="cursor: pointer;" onclick="window.location.href='ProductDetails.html?id=${p.productId}'">
+                        ${imageHtml}
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">${p.productName}</h5>
                             <p class="card-text text-muted small flex-grow-1">${p.productDescription || ''}</p>
                             <div class="mb-2">${attributesHtml}</div>
                             <div class="d-flex justify-content-between align-items-center mt-auto">
                                 <span class="fw-bold">$${p.price}</span>
-                                <button class="btn btn-sm btn-outline-primary" onclick="addToCart(${p.productId}, '${p.productName}', ${p.price}, '${p.merchantId || ''}')">Add</button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); addToCart(${p.productId}, '${p.productName}', ${p.price}, '${p.merchantId || ''}')">Add</button>
                             </div>
                         </div>
                     </div>
@@ -306,11 +316,10 @@
         }
 
         function addToCart(id, name, price, merchantId) {
+            // Strict restaurant restriction - do not allow mixed carts
             if (cart.length > 0 && cart[0].merchantId !== merchantId) {
-                if (!confirm('Your cart contains items from another restaurant. Clear cart to add this item?')) {
-                    return;
-                }
-                cart = [];
+                alert('⚠️ Your cart contains items from another restaurant.\n\nPlease complete your current order or clear your cart before adding items from a different restaurant.');
+                return; // Prevent adding
             }
 
             const existing = cart.find(i => i.id === id);

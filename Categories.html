@@ -139,10 +139,9 @@
             const result = await Authentication.addCategory(userId, categoriesStr);
 
             if (result.success) {
-                // Clear temp ID
-                sessionStorage.removeItem('tempUserId');
-                alert('Setup complete! Please login.');
-                window.location.href = 'Login.html';
+                // Keep temp ID for restaurant image upload
+                // sessionStorage tempUserId will be used in RestaurantImage.html
+                window.location.href = 'RestaurantImage.html';
             } else {
                 errorAlert.textContent = result.message || 'Failed to save categories';
                 errorAlert.style.display = 'block';

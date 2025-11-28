@@ -53,14 +53,16 @@ const FOOD_CATEGORIES = {
 // Wizard State for Product Creation
 const wizardState = {
     currentStep: 1,
-    totalSteps: 4,
+    totalSteps: 5,
     productData: {
         name: '',
         price: '',
         description: '',
         selectedCategories: [],  // Array of category names (strings)
         selectedCategoryIds: [], // Array of FoodCategory enum integers
-        selectedAttributes: []   // Array of {name, value, measurementUnit}
+        selectedAttributes: [],  // Array of {name, value, measurementUnit}
+        uploadedImages: [],      // Array of File objects
+        mainImageIndex: 0        // Index of main image in uploadedImages array
     }
 };
 

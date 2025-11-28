@@ -176,12 +176,18 @@
                 const name = shop.shopName || 'Restaurant';
                 const desc = shop.shopDescription || 'No description available.';
                 const id = shop.shopId;
+                const imageUrl = shop.url || '';
+
+                // Use actual restaurant image if available, otherwise show placeholder
+                const imageHtml = imageUrl
+                    ? `<img src="${imageUrl}" class="card-img-top shop-img" alt="${name}" style="object-fit: cover;">`
+                    : `<div class="card-img-top shop-img d-flex align-items-center justify-content-center text-muted bg-light">
+                           <i class="ion-ios-restaurant" style="font-size: 3rem;"></i>
+                       </div>`;
 
                 col.innerHTML = `
                     <div class="card shop-card h-100" onclick="window.location.href='Products.html?restaurantId=${id}'">
-                        <div class="card-img-top shop-img d-flex align-items-center justify-content-center text-muted">
-                            <i class="ion-ios-restaurant" style="font-size: 3rem;"></i>
-                        </div>
+                        ${imageHtml}
                         <div class="card-body">
                             <h5 class="card-title">${name}</h5>
                             <p class="card-text text-muted small text-truncate">${desc}</p>

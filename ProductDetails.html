@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details - Foodo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="shortcut icon" href="icons/favicon.ico" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css?family=Poppins:300,400,500,600,700,800,900" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/ionicons/4.5.6/css/ionicons.min.css">
+    <link rel="stylesheet" href="css/dropdown.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/Authentication.js"></script>
+    <script src="js/CustomerService.js"></script>
+    <style>
+        .product-image-gallery {
+            position: sticky;
+            top: 20px;
+        }
+
+        .main-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .thumbnail-container {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+        }
+
+        .thumbnail {
+            width: 80px;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .thumbnail:hover,
+        .thumbnail.active {
+            border-color: #ffc107;
+        }
+
+        .placeholder-image {
+            width: 100%;
+            height: 400px;
+            background: #f0f0f0;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            font-size: 5rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="header">
+        <div class="container-fluid d-flex justify-content-between align-items-center m-0">
+            <a href="index.html" class="d-flex align-items-center text-decoration-none p-1">
+                <img src="icons/Logo.png" alt="Logo" height="60">
+            </a>
+
+            <nav class="d-none d-md-flex gap-4">
+                <a href="index.html" class="text-decoration-none text-dark">Home</a>
+                <a href="Shops.html" class="text-decoration-none text-dark">Restaurants</a>
+                <a href="Products.html" class="text-decoration-none text-dark fw-bold">Foods</a>
+            </nav>
+
+            <div class="d-flex align-items-center gap-2">
+                <div id="authButtons">
+                    <a href="Login.html" class="btn btn-primary">Login</a>
+                    <a href="Register.html" class="btn btn-outline-primary">Register</a>
+                </div>
+
+                <div class="btn-group d-none" id="drop">
+                    <a href="#" class="btn-img img dropdown-toggle rounded-circle" data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        style="background-image: url('images/user.png'); width:50px; height:50px;">
+                    </a>
+
+                    <div class="dropdown-menu dropdown-menu-end mt-2">
+                        <a class="dropdown-item d-flex align-items-center" href="CustomerDashboard.html">
+                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                <span class="ion-ios-person"></span>
+                            </div>
+                            My Profile
+                        </a>
+                        <a class="dropdown-item d-flex align-items-center" href="CustomerDashboard.html#orders">
+                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                <span class="ion-ios-cart"></span>
+                            </div>
+                            My Orders
+                        </a>
+                        <a class="dropdown-item d-flex align-items-center" id="logout" href="#">
+                            <div class="icon d-flex align-items-center justify-content-center me-3">
+                                <span class="ion-ios-power"></span>
+                            </div>
+                            Log Out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container py-5">
+        <div id="loadingSpinner" class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <div id="productContent" style="display: none;">
+            <div class="row">
+                <!-- Product Images -->
+                <div class="col-md-6">
+                    <div class="product-image-gallery">
+                        <div id="mainImageContainer"></div>
+                        <div class="thumbnail-container" id="thumbnailContainer"></div>
+                    </div>
+                </div>
+
+                <!-- Product Details -->
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <a href="#" id="restaurantLink" class="text-decoration-none text-muted">
+                            <small><i class="ion-ios-restaurant"></i> <span
+                                    id="restaurantName">Loading...</span></small>
+                        </a>
+                    </div>
+
+                    <h1 id="productName">Loading...</h1>
+
+                    <div class="mb-3">
+                        <span class="h3 text-primary fw-bold" id="productPrice">$0.00</span>
+                    </div>
+
+                    <div class="mb-4" id="categoriesContainer"></div>
+
+                    <h5>Description</h5>
+                    <p class="text-muted" id="productDescription">No description available</p>
+
+                    <div class="mb-4" id="attributesContainer"></div>
+
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary btn-lg" id="addToCartBtn">
+                            <i class="ion-ios-cart"></i> Add to Cart
+                        </button>
+                        <a href="Products.html" class="btn btn-outline-secondary">
+                            <i class="ion-ios-arrow-back"></i> Back to Products
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="errorMessage" class="alert alert-danger" style="display: none;"></div>
+    </div>
+
+    <script>
+        let currentProduct = null;
+        let cart = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            Authentication.updateHeader();
+            loadCart();
+            loadProductDetails();
+        });
+
+        async function loadProductDetails() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const productId = urlParams.get('id');
+
+            if (!productId) {
+                showError('Product ID not specified');
+                return;
+            }
+
+            try {
+                const result = await CustomerService.getProductById(productId);
+
+                if (result) {
+                    currentProduct = result;
+                    displayProduct(result);
+                } else {
+                    showError('Product not found');
+                }
+            } catch (error) {
+                console.error('Error loading product:', error);
+                showError('Failed to load product details');
+            }
+        }
+
+        function displayProduct(product) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('productContent').style.display = 'block';
+
+            // Product basic info
+            document.getElementById('productName').textContent = product.productName || 'Unnamed Product';
+            document.getElementById('productPrice').textContent = `$${product.price || '0.00'}`;
+            document.getElementById('productDescription').textContent = product.productDescription || 'No description available';
+
+            // Restaurant info (if available from product data or fetch separately)
+            // For now, we'll use merchantId if available
+            if (product.merchantId) {
+                const restaurantLink = document.getElementById('restaurantLink');
+                restaurantLink.href = `Products.html?restaurantId=${product.merchantId}`;
+                // We might not have restaurant name in product response, so keep it generic
+                document.getElementById('restaurantName').textContent = 'View Restaurant';
+            }
+
+            // Display images
+            displayImages(product.urls || []);
+
+            // Display categories
+            displayCategories(product.productCategories || []);
+
+            // Display attributes
+            displayAttributes(product.attributes || []);
+
+            // Setup add to cart button
+            document.getElementById('addToCartBtn').onclick = () => {
+                addToCart(product.productId, product.productName, product.price, product.merchantId || '');
+            };
+        }
+
+        function displayImages(images) {
+            const mainContainer = document.getElementById('mainImageContainer');
+            const thumbnailContainer = document.getElementById('thumbnailContainer');
+
+            if (!images || images.length === 0) {
+                mainContainer.innerHTML = `
+                    <div class="placeholder-image">
+                        <i class="ion-ios-image"></i>
+                    </div>
+                `;
+                thumbnailContainer.innerHTML = '';
+                return;
+            }
+
+            // Find main image or use first
+            const mainImage = images.find(img => img.isMain) || images[0];
+
+            mainContainer.innerHTML = `
+                <img src="${mainImage.url}" class="main-image" id="mainImage" alt="Product">
+            `;
+
+            thumbnailContainer.innerHTML = '';
+            images.forEach((img, index) => {
+                const thumb = document.createElement('img');
+                thumb.src = img.url;
+                thumb.className = 'thumbnail' + (img.isMain ? ' active' : '');
+                thumb.onclick = () => switchMainImage(img.url, index);
+                thumbnailContainer.appendChild(thumb);
+            });
+        }
+
+        function switchMainImage(url, index) {
+            document.getElementById('mainImage').src = url;
+            document.querySelectorAll('.thumbnail').forEach((thumb, i) => {
+                thumb.classList.toggle('active', i === index);
+            });
+        }
+
+        function displayCategories(categories) {
+            const container = document.getElementById('categoriesContainer');
+            if (!categories || categories.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = categories.map(cat =>
+                `<span class="badge bg-warning text-dark me-1">${cat}</span>`
+            ).join('');
+        }
+
+        function displayAttributes(attributes) {
+            const container = document.getElementById('attributesContainer');
+            if (!attributes || attributes.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = `
+                <h5>Specifications</h5>
+                <ul class="list-unstyled">
+                    ${attributes.map(attr =>
+                `<li><strong>${attr.name}:</strong> ${attr.value} ${attr.measurementUnit || ''}</li>`
+            ).join('')}
+                </ul>
+            `;
+        }
+
+        function showError(message) {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('errorMessage').style.display = 'block';
+        }
+
+        // Cart functions
+        function loadCart() {
+            const stored = localStorage.getItem('foodo_cart');
+            if (stored) cart = JSON.parse(stored);
+        }
+
+        function saveCart() {
+            localStorage.setItem('foodo_cart', JSON.stringify(cart));
+        }
+
+        function addToCart(id, name, price, merchantId) {
+            // Check restaurant restriction
+            if (cart.length > 0 && cart[0].merchantId !== merchantId) {
+                alert('⚠️ Your cart contains items from another restaurant. Please clear your cart first or complete your current order.');
+                return;
+            }
+
+            const existing = cart.find(i => i.id === id);
+            if (existing) {
+                existing.quantity++;
+            } else {
+                cart.push({ id, name, price, merchantId, quantity: 1 });
+            }
+            saveCart();
+            alert(`✓ ${name} added to cart!`);
+        }
+    </script>
+</body>
+
+</html>

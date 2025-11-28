@@ -89,7 +89,15 @@ function nextWizardStep() {
         // Step 3: Attributes (optional, collect selected)
         collectSelectedAttributes();
         
-        // Render review for step 4
+        // Set up image upload for step 4
+        setupImageUpload();
+        
+    } else if (wizardState.currentStep === 4) {
+        // Step 4: Image upload validation
+        collectUploadedImages();
+        
+        // Render main image selection for step 5
+        renderMainImageSelection();
         renderReviewInWizard();
     }
     
@@ -247,7 +255,143 @@ function collectSelectedAttributes() {
     wizardState.productData.selectedAttributes = selectedAttributes;
 }
 
-// Render review in step 4
+// Set up image upload for Step 4
+function setupImageUpload() {
+    const fileInput = document.getElementById('productImagesInput');
+    const previewContainer = document.getElementById('imagePreviewContainer');
+    
+    // Clear previous selections
+    wizardState.productData.uploadedImages = [];
+    if (fileInput) fileInput.value = '';
+    previewContainer.innerHTML = '';
+    
+    // Attach change event listener
+    fileInput.addEventListener('change', function(e) {
+        handleImageSelection(e.target.files);
+    });
+}
+
+// Handle image selection
+function handleImageSelection(files) {
+    const maxImages = 5;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    
+    if (files.length > maxImages) {
+        alert(`You can upload maximum ${maxImages} images`);
+        return;
+    }
+    
+    wizardState.productData.uploadedImages = [];
+    const validFiles = [];
+    
+    for (let file of files) {
+        if (!file.type.startsWith('image/')) {
+            alert(`${file.name} is not an image file`);
+            continue;
+        }
+        if (file.size > maxSize) {
+            alert(`${file.name} exceeds 5MB limit`);
+            continue;
+        }
+        validFiles.push(file);
+    }
+    
+    wizardState.productData.uploadedImages = validFiles;
+    renderImagePreviews();
+}
+
+// Render image previews
+function renderImagePreviews() {
+    const container = document.getElementById('imagePreviewContainer');
+    container.innerHTML = '';
+    
+    if (wizardState.productData.uploadedImages.length === 0) {
+        container.innerHTML = '<p class="text-muted">No images selected</p>';
+        return;
+    }
+    
+    wizardState.productData.uploadedImages.forEach((file, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-md-3 mb-3';
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            col.innerHTML = `
+                <div class="card">
+                    <img src="${e.target.result}" class="card-img-top" style="height: 150px; object-fit: cover;">
+                    <div class="card-body p-2">
+                        <small class="text-muted">${file.name}</small>
+                    </div>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+        
+        container.appendChild(col);
+    });
+}
+
+// Collect uploaded images
+function collectUploadedImages() {
+    // Images are already collected in wizardState.productData.uploadedImages
+    // Just validate that at least one image is uploaded (optional)
+    if (wizardState.productData.uploadedImages.length === 0) {
+        // Optional: allow proceeding without images
+        wizardState.productData.mainImageIndex = -1;
+    } else {
+        // Set first image as default main image
+        wizardState.productData.mainImageIndex = 0;
+    }
+}
+
+// Render main image selection radio buttons
+function renderMainImageSelection() {
+    const container = document.getElementById('mainImageOptions');
+    const selectionDiv = document.getElementById('mainImageSelection');
+    
+    container.innerHTML = '';
+    
+    if (wizardState.productData.uploadedImages.length === 0) {
+        selectionDiv.style.display = 'none';
+        return;
+    }
+    
+    selectionDiv.style.display = 'block';
+    
+    wizardState.productData.uploadedImages.forEach((file, index) => {
+        const col = document.createElement('div');
+        col.className = 'col-md-4 mb-3';
+        
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const isChecked = index === wizardState.productData.mainImageIndex ? 'checked' : '';
+            col.innerHTML = `
+                <div class="card" style="cursor: pointer;" onclick="selectMainImage(${index})">
+                    <img src="${e.target.result}" class="card-img-top" style="height: 120px; object-fit: cover;">
+                    <div class="card-body p-2 text-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="mainImage" id="mainImg${index}" ${isChecked}>
+                            <label class="form-check-label" for="mainImg${index}">
+                                <small>Main Image</small>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+        reader.readAsDataURL(file);
+        
+        container.appendChild(col);
+    });
+}
+
+// Select main image
+function selectMainImage(index) {
+    wizardState.productData.mainImageIndex = index;
+    document.getElementById(`mainImg${index}`).checked = true;
+}
+
+// Render review in step 5
 function renderReviewInWizard() {
     document.getElementById('reviewName').textContent = wizardState.productData.name;
     document.getElementById('reviewPrice').textContent = `$${wizardState.productData.price}`;
@@ -260,6 +404,12 @@ function renderReviewInWizard() {
           ).join('')
         : 'None';
     document.getElementById('reviewAttributes').innerHTML = attributesHtml;
+    
+    // Show image count
+    const imageCount = wizardState.productData.uploadedImages.length;
+    document.getElementById('reviewImages').textContent = imageCount > 0 
+        ? `${imageCount} image(s) selected` 
+        : 'No images';
 }
 
 // Submit wizard product (final step)
@@ -277,13 +427,92 @@ async function submitWizardProduct() {
         Categories: wizardState.productData.selectedCategoryIds  // Integer array matching FoodCategory enum
     };
     
+    // Step 1: Create the product
     const result = await MerchantService.createProduct(payload);
     
-    if (result.success) {
-        alert('Product created successfully!');
+    if (!result.success) {
+        alert(result.message || 'Failed to create product');
+        return;
+    }
+    
+    // Get the created product ID from response
+    const productId = result.data?.productId;
+    
+    if (!productId) {
+        alert('Product created but ID not returned. Please refresh.');
         productModal.hide();
         loadProducts();
-    } else {
-        alert(result.message || 'Failed to create product');
+        return;
+    }
+    
+    // Step 2: Upload images if any
+    if (wizardState.productData.uploadedImages.length > 0) {
+        const imageUploadResult = await uploadProductImages(productId);
+        
+        if (!imageUploadResult.success) {
+            alert('Product created but image upload failed. You can add images later.');
+            productModal.hide();
+            loadProducts();
+            return;
+        }
+        
+        // Step 3: Set main image if images were uploaded
+        if (imageUploadResult.photoIds && imageUploadResult.photoIds.length > 0) {
+            const mainPhotoId = imageUploadResult.photoIds[wizardState.productData.mainImageIndex];
+            await setMainProductImage(mainPhotoId);
+        }
+    }
+    
+    alert('Product created successfully!');
+    productModal.hide();
+    loadProducts();
+}
+
+// Upload product images
+async function uploadProductImages(productId) {
+    const formData = new FormData();
+    
+    wizardState.productData.uploadedImages.forEach(file => {
+        formData.append('Files', file);
+    });
+    formData.append('ProductId', productId.toString());
+    
+    try {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/Photos/add-product-photos`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${Authentication.getToken()}`
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // Backend returns PhotoResultDto with array of uploaded photo IDs
+            return { success: true, photoIds: data.photoIds || data };
+        } else {
+            return { success: false };
+        }
+    } catch (error) {
+        console.error('Image upload error:', error);
+        return { success: false };
+    }
+}
+
+// Set main product image
+async function setMainProductImage(photoId) {
+    try {
+        const response = await fetch(`${API_CONFIG.BASE_URL}/api/Photos/set-photo-main/${photoId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${Authentication.getToken()}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        return response.ok;
+    } catch (error) {
+        console.error('Set main image error:', error);
+        return false;
     }
 }
