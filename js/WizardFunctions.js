@@ -478,7 +478,7 @@ async function uploadProductImages(productId) {
     formData.append('ProductId', productId.toString());
     
     try {
-        const response = await fetch(`${API_CONFIG.BASE_URL}/api/Photos/add-product-photos`, {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/Photos/add-product-photos`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${Authentication.getToken()}`
@@ -502,7 +502,7 @@ async function uploadProductImages(productId) {
 // Set main product image
 async function setMainProductImage(photoId) {
     try {
-        const response = await fetch(`${API_CONFIG.BASE_URL}/api/Photos/set-photo-main/${photoId}`, {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/Photos/set-photo-main/${photoId}`, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${Authentication.getToken()}`,

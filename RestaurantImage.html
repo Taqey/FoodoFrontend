@@ -209,7 +209,7 @@
                 formData.append('file', selectedFile);
                 formData.append('MerchantId', userId);
 
-                const response = await fetch(`${API_CONFIG.BASE_URL}/api/Photos/add-merchant-photo`, {
+                const response = await fetch(`${CONFIG.API_BASE_URL}/Photos/add-merchant-photo`, {
                     method: 'POST',
                     body: formData
                 });
