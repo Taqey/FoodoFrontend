@@ -56,26 +56,15 @@ const Authentication = {
     },
 
     requireRole: (requiredRole) => {
-        const currentRole = Authentication.getUserRole();
-        
-        // Not logged in → redirect to login
         if (!Authentication.isAuthenticated()) {
             window.location.href = 'Login.html';
             return;
         }
 
-        // Logged in but wrong role → redirect to appropriate dashboard
-        if (currentRole !== requiredRole) {
-            if (currentRole === 'Merchant') {
-                // Merchant trying to access customer page → redirect to merchant dashboard
-                window.location.href = 'MerchantDashboard.html';
-            } else if (currentRole === 'Customer') {
-                // Customer trying to access merchant page → redirect to customer dashboard
-                window.location.href = 'CustomerDashboard.html';
-            } else {
-                // Unknown role → redirect to login
-                window.location.href = 'Login.html';
-            }
+        const role = Authentication.getUserRole();
+        if (role !== requiredRole) {
+            alert('Access Denied – Only merchants are allowed to view this page.');
+            window.location.href = 'index.html';
         }
     },
 
