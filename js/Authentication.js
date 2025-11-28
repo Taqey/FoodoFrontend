@@ -131,7 +131,7 @@ const Authentication = {
      * - Manages loading state if requested
      */
     fetchWithAuth: async (url, options = {}) => {
-        const { showSpinner = false, ...fetchOptions } = options;
+        const { showSpinner = false, ...fetchOptions} = options;
         
         if (showSpinner) Authentication.showLoading();
 

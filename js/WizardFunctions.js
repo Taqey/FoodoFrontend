@@ -436,7 +436,8 @@ async function submitWizardProduct() {
     }
     
     // Get the created product ID from response
-    const productId = result.data?.productId;
+    // Backend returns CreateProductDto with ProductId field (capital P)
+    const productId = result.data?.ProductId || result.data?.productId;
     
     if (!productId) {
         alert('Product created but ID not returned. Please refresh.');

@@ -132,7 +132,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     loadProducts();
+    
+    // Load and update merchant avatar
+    updateMerchantAvatar();
 });
+
+// Update merchant avatar with restaurant image
+async function updateMerchantAvatar() {
+    try {
+        // Fetch merchant photo from backend
+        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Photos/get-user-photo`, {
+            method: 'GET'
+        });
+        
+        if (response.ok) {
+            const photoData = await response.json();
+            const photoUrl = photoData.url || photoData.Url;
+            
+            if (photoUrl) {
+                const avatarElement = document.getElementById('merchantAvatar');
+                if (avatarElement) {
+                    avatarElement.style.backgroundImage = `url('${photoUrl}')`;
+                }
+            }
+        }
+    } catch (error) {
+        console.log('[Avatar] Could not load merchant photo, using default');
+    }
+}
 
 // --- Pagination Logic ---
 function changePage(type, delta) {

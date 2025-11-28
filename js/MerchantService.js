@@ -54,7 +54,10 @@ const MerchantService = {
                 const errorText = await response.text();
                 throw new Error(errorText || 'Failed to create product');
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns CreateProductDto with ProductId field
+            const data = await response.json();
+            return { success: true, data: data };
         } catch (error) {
             return { success: false, message: error.message };
         }
