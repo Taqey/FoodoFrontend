@@ -4,11 +4,11 @@ const CustomerService = {
     // --- Shops ---
     getAllShops: async (pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-all-shops`, {
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-all-shops`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
-                showSpinner: true
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch shops');
             return await response.json();
@@ -20,11 +20,11 @@ const CustomerService = {
 
     getAllShopsByCategory: async (category, pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-all-shops-by-category`, {
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-all-shops-by-category`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize }),
-                showSpinner: true
+                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch shops by category');
             return await response.json();
@@ -36,9 +36,8 @@ const CustomerService = {
 
     getShopById: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-shop-by-id/${id}`, {
-                showSpinner: true
-            });
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-shop-by-id/${id}`);
             if (!response.ok) throw new Error('Failed to fetch shop details');
             return await response.json();
         } catch (error) {
@@ -50,11 +49,11 @@ const CustomerService = {
     // --- Products ---
     getAllProducts: async (pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-all-products`, {
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-all-products`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
-                showSpinner: true
+                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch products');
             return await response.json();
@@ -66,11 +65,11 @@ const CustomerService = {
 
     getAllProductsByCategory: async (category, pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-all-products-by-category`, {
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-all-products-by-category`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize }),
-                showSpinner: true
+                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch products by category');
             return await response.json();
@@ -82,11 +81,11 @@ const CustomerService = {
 
     getAllProductsByRestaurant: async (restaurantId, pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-all-products-by-restaurant`, {
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-all-products-by-restaurant`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ MerchantId: restaurantId, Page: pageNumber, PageSize: pageSize }),
-                showSpinner: true
+                body: JSON.stringify({ MerchantId: restaurantId, Page: pageNumber, PageSize: pageSize })
             });
             if (!response.ok) throw new Error('Failed to fetch products by restaurant');
             return await response.json();
@@ -98,9 +97,8 @@ const CustomerService = {
 
     getProductById: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-product-by-id/${id}`, {
-                showSpinner: true
-            });
+            // Public endpoint - no auth required
+            const response = await fetch(`${CUSTOMER_API_URL}/get-product-by-id/${id}`);
             if (!response.ok) throw new Error('Failed to fetch product details');
             return await response.json();
         } catch (error) {
