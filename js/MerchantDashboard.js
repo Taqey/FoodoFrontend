@@ -337,6 +337,20 @@ async function saveEditedProduct() {
     const result = await MerchantService.updateProduct(id, payload);
 
     if (result.success) {
+        // Update Categories - get current product categories and compare
+        const currentProduct = await MerchantService.getProductById(id);
+        
+        // Convert current category names to integers
+        const currentCats = currentProduct.productCategories ? currentProduct.productCategories.map(catName => {
+            return FOOD_CATEGORIES[catName];
+        }).filter(Boolean) : [];
+        
+        const toAdd = selectedCategories.filter(c => !currentCats.includes(c));
+        const toRemove = currentCats.filter(c => !selectedCategories.includes(c));
+
+        if (toAdd.length > 0) await MerchantService.addProductCategories(id, toAdd);
+        if (toRemove.length > 0) await MerchantService.removeProductCategories(id, toRemove);
+        
         alert('Product updated successfully!');
         editProductModal.hide();
         loadProducts();
@@ -344,6 +358,7 @@ async function saveEditedProduct() {
         alert(result.message || 'Failed to update product');
     }
 }
+
 
 // Add attribute to product being edited
 async function addAttributeToEditProduct() {

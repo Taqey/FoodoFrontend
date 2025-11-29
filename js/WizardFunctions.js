@@ -427,7 +427,7 @@ async function submitWizardProduct() {
         Categories: wizardState.productData.selectedCategoryIds  // Integer array matching FoodCategory enum
     };
     
-    // Step 1: Create the product
+    // Step 1: Create the product (spinner shown automatically by MerchantService)
     const result = await MerchantService.createProduct(payload);
     
     if (!result.success) {
@@ -446,58 +446,81 @@ async function submitWizardProduct() {
         return;
     }
     
-    // Step 2: Upload images if any
+    // SUCCESS: Product created! Hide spinner, show success, close modal
+    alert('Product created successfully!');
+    productModal.hide();
+    loadProducts();
+    
+    // Step 2: Upload images in background if any (don't block UI)
     if (wizardState.productData.uploadedImages.length > 0) {
-        const imageUploadResult = await uploadProductImages(productId);
+        console.log('[Background] Starting image upload for product:', productId);
+        
+        // Fire and forget - upload happens in background
+        uploadProductImagesBackground(productId, wizardState.productData.uploadedImages, wizardState.productData.mainImageIndex)
+            .then(success => {
+                if (success) {
+                    console.log('[Background] Images uploaded successfully');
+                    // Optionally reload products to show images
+                    loadProducts();
+                } else {
+                    console.warn('[Background] Image upload failed, but product was created');
+                }
+            });
+    }
+}
+
+// Background image upload (doesn't block UI)
+async function uploadProductImagesBackground(productId, images, mainImageIndex) {
+    try {
+        const imageUploadResult = await uploadProductImages(productId, images);
         
         if (!imageUploadResult.success) {
-            alert('Product created but image upload failed. You can add images later.');
-            productModal.hide();
-            loadProducts();
-            return;
+            console.error('[Background] Image upload failed');
+            return false;
         }
         
-        // Step 3: Set main image if images were uploaded
+        // Set main image if images were uploaded
         if (imageUploadResult.photoIds && imageUploadResult.photoIds.length > 0) {
-            console.log('Photo IDs returned:', imageUploadResult.photoIds);
+            console.log('[Background] Photo IDs returned:', imageUploadResult.photoIds);
             
             // Ensure we have a valid index
-            let mainIndex = wizardState.productData.mainImageIndex;
+            let mainIndex = mainImageIndex;
             if (mainIndex < 0 || mainIndex >= imageUploadResult.photoIds.length) {
                 mainIndex = 0; // Default to first if invalid
             }
 
             const mainPhotoId = imageUploadResult.photoIds[mainIndex];
-            console.log('Selected Main Photo ID:', mainPhotoId, 'at index:', mainIndex);
+            console.log('[Background] Selected Main Photo ID:', mainPhotoId, 'at index:', mainIndex);
             
             if (mainPhotoId) {
                 const setMainResult = await setMainProductImage(mainPhotoId);
                 if (!setMainResult) {
-                    console.error('Failed to set main photo');
-                    // Don't block success message, but log it
+                    console.error('[Background] Failed to set main photo');
                 }
             } else {
-                console.error('Main photo ID is undefined');
+                console.error('[Background] Main photo ID is undefined');
             }
         }
+        
+        return true;
+    } catch (error) {
+        console.error('[Background] Error during image upload:', error);
+        return false;
     }
-    
-    alert('Product created successfully!');
-    productModal.hide();
-    loadProducts();
 }
 
-// Upload product images
-async function uploadProductImages(productId) {
+// Upload product images (refactored to accept images array)
+async function uploadProductImages(productId, images) {
     const formData = new FormData();
     
-    wizardState.productData.uploadedImages.forEach(file => {
+    images.forEach(file => {
         formData.append('Files', file);
     });
     formData.append('ProductId', productId.toString());
     
     try {
         // Use fetchWithAuth for proper authentication and token refresh
+        // Don't show spinner for background upload
         const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Photos/add-product-photos`, {
             method: 'POST',
             body: formData

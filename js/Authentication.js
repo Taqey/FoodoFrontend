@@ -258,6 +258,69 @@ const Authentication = {
                 message: error.message || 'Network error'
             };
         }
+    },
+
+    // ==================== EMAIL VERIFICATION ====================
+
+    /**
+     * Sends a verification code to the authenticated user's email
+     * @returns {Promise<Object>} Success status and message
+     */
+    async verifyEmailRequest() {
+        try {
+            const response = await this.fetchWithAuth(`${CONFIG.API_BASE_URL}/Authentication/verify-email-request`, {
+                method: 'POST'
+            });
+
+            if (response.ok) {
+                const message = await response.text();
+                return { success: true, message: message || 'Verification code sent' };
+            } else {
+                const errorText = await response.text();
+                return {
+                    success: false,
+                    message: errorText || 'Failed to send verification code'
+                };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            };
+        }
+    },
+
+    /**
+     * Verifies the user's email using the provided code
+     * @param {string} code - Verification code from email
+     * @returns {Promise<Object>} Success status and message
+     */
+    async verifyEmail(code) {
+        try {
+            const formData = new FormData();
+            formData.append('Code', code);
+
+            const response = await this.fetchWithAuth(`${CONFIG.API_BASE_URL}/Authentication/verify-email`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok) {
+                const message = await response.text();
+                return { success: true, message: message || 'Email verified successfully' };
+            } else {
+                const errorText = await response.text();
+                return {
+                    success: false,
+                    message: errorText || 'Invalid or expired verification code'
+                };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            };
+        }
     }
 };
 

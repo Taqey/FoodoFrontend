@@ -601,9 +601,11 @@
                         <label for="orderStatusSelect" class="form-label">Update Status</label>
                         <div class="d-flex gap-2">
                             <select class="form-select" id="orderStatusSelect">
-                                <!--Merchants can ONLY update to Processing or Cancelled -->
+                                <option value="Pending">Pending</option>
                                 <option value="Processing">Processing</option>
+                                <option value="Completed">Completed</option>
                                 <option value="Cancelled">Cancelled</option>
+                                <option value="OutForDelivery">Out For Delivery</option>
                             </select>
                             <button class="btn btn-primary" onclick="updateOrderStatus()">Update</button>
                         </div>
