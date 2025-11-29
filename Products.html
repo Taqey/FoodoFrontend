@@ -276,7 +276,7 @@
                 const mainImage = p.urls?.find(u => u.isMain)?.url || p.urls?.[0]?.url || '';
 
                 const imageHtml = mainImage
-                    ? `<img src="${mainImage}" class="card-img-top" style="height: 200px; object-fit: cover;" alt="${p.productName}">`
+                    ? `<img src="${mainImage}" class="card-img-top" style="height: 200px; object-fit: contain;" alt="${p.productName}">`
                     : `<div class="card-img-top d-flex align-items-center justify-content-center bg-light" style="height: 200px;">
                            <i class="ion-ios-restaurant" style="font-size: 3rem; color: #ddd;"></i>
                        </div>`;
