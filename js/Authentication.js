@@ -1,534 +1,265 @@
-const API_BASE_URL = (typeof CONFIG !== 'undefined' ? CONFIG.API_BASE_URL : 'https://foodo.runasp.net/api') + '/Authentication';
+// Authentication.js - Simple Token Management System
+// This implements the SIMPLEST mechanism: check token expiration before ANY API call
 
 const Authentication = {
-    // --- State Management ---
-    getToken: () => localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken'),
+    // ==================== TOKEN STORAGE ====================
     
-    setToken: (token, rememberMe) => {
-        if (rememberMe) {
-            localStorage.setItem('accessToken', token);
-        } else {
-            sessionStorage.setItem('accessToken', token);
-        }
+    getToken() {
+        // Try localStorage first (Remember Me = true), then sessionStorage
+        return localStorage.getItem('accessToken') || sessionStorage.getItem('accessToken');
     },
 
-    clearToken: () => {
-        // Clear access token from both storage locations
+    getTokenExpiration() {
+        return localStorage.getItem('tokenExpiration') || sessionStorage.getItem('tokenExpiration');
+    },
+
+    setToken(token, expiresOn, rememberMe = false) {
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('accessToken', token);
+        storage.setItem('tokenExpiration', expiresOn);
+    },
+
+    removeToken() {
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('tokenExpiration');
         sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('tokenExpiration');
+    },
+
+    getRole() {
+        const token = this.getToken();
+        if (!token) return null;
         
-        // Note: HttpOnly refresh token cookie cannot be cleared from JavaScript.
-        // It will be cleared by the backend or expire naturally.
-    },
-
-    isAuthenticated: () => !!Authentication.getToken(),
-
-    getUserRole: () => {
-        const token = Authentication.getToken();
-        if (!token) return null;
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.role;
+            return payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || payload.role;
         } catch (e) {
             return null;
         }
     },
 
-    getUserId: () => {
-        const token = Authentication.getToken();
-        if (!token) return null;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload["http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"] || payload.nameid || payload.sub;
-        } catch (e) {
-            return null;
-        }
-    },
+    // ==================== TOKEN EXPIRATION CHECK ====================
 
-    getTokenExpiration: (token) => {
-        if (!token) return null;
-        try {
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            return payload.exp * 1000; // Convert to ms
-        } catch (e) {
-            return null;
-        }
-    },
-
-    requireRole: (requiredRole) => {
-        if (!Authentication.isAuthenticated()) {
-            window.location.href = 'Login.html';
-            return;
-        }
-
-        const role = Authentication.getUserRole();
-        if (role !== requiredRole) {
-            alert('Access Denied – Only merchants are allowed to view this page.');
-            window.location.href = 'index.html';
-        }
-    },
-
-    // --- Spinner Logic ---
-    showLoading: () => {
-        let spinner = document.getElementById('global-spinner');
-        if (!spinner) {
-            spinner = document.createElement('div');
-            spinner.id = 'global-spinner';
-            spinner.innerHTML = `
-                <div class="spinner-overlay">
-                    <div class="spinner-border text-warning" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                </div>
-                <style>
-                    .spinner-overlay {
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: rgba(255, 255, 255, 0.8);
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        z-index: 9999;
-                        backdrop-filter: blur(2px);
-                    }
-                </style>
-            `;
-            document.body.appendChild(spinner);
-        }
-        spinner.style.display = 'block';
-        document.body.style.pointerEvents = 'none';
-    },
-
-    hideLoading: () => {
-        const spinner = document.getElementById('global-spinner');
-        if (spinner) {
-            spinner.style.display = 'none';
-        }
-        document.body.style.pointerEvents = 'auto';
-    },
-
-    // --- Core API Wrapper ---
-    
-    /**
-     * A wrapper for fetch that handles authentication automatically.
-     * - Adds Authorization header
-     * - Checks token expiration before request
-     * - Handles 401 by refreshing and retrying
-     * - Manages loading state if requested
-     */
-    fetchWithAuth: async (url, options = {}) => {
-        const { showSpinner = false, ...fetchOptions} = options;
+    isTokenExpired() {
+        const expiresOn = this.getTokenExpiration();
+        if (!expiresOn) return true;
         
-        if (showSpinner) Authentication.showLoading();
+        // Parse the expiration date and add a 30-second buffer
+        const expirationTime = new Date(expiresOn).getTime();
+        const currentTime = Date.now();
+        const bufferTime = 30 * 1000; // 30 seconds
+        
+        return currentTime >= (expirationTime - bufferTime);
+    },
 
+    // ==================== SIMPLE PRE-API-CALL CHECK ====================
+    // This is the CORE mechanism: check and refresh BEFORE any API call
+
+    async checkAndRefreshToken() {
+        const token = this.getToken();
+        
+        // If no token exists, try to refresh using HttpOnly cookie
+        if (!token) {
+            const refreshed = await this.refreshAccessToken();
+            return refreshed;
+        }
+        
+        // If token exists but is expired, refresh it
+        if (this.isTokenExpired()) {
+            const refreshed = await this.refreshAccessToken();
+            return refreshed;
+        }
+        
+        // Token exists and is not expired
+        return true;
+    },
+
+    // ==================== REFRESH TOKEN ====================
+
+    async refreshAccessToken() {
         try {
-            // 1. Check if token is expired before making the request
-            await Authentication.ensureValidToken();
-
-            // 2. Prepare headers
-            const headers = new Headers(fetchOptions.headers || {});
-            const token = Authentication.getToken();
-            
-            if (token) {
-                headers.set('Authorization', `Bearer ${token}`);
-            }
-            
-            // CRITICAL: Always include credentials to send/receive cookies (like RefreshToken)
-            fetchOptions.credentials = 'include';
-            fetchOptions.headers = headers;
-
-            // 3. Make the initial request
-            let response = await fetch(url, fetchOptions);
-
-            // 4. Handle 401 Unauthorized (Token might have expired during flight or check failed)
-            if (response.status === 401) {
-                console.warn('[AUTH] 401 received, attempting refresh and retry...');
-                
-                const refreshSuccess = await Authentication.refreshToken();
-                
-                if (refreshSuccess) {
-                    // Update header with new token
-                    headers.set('Authorization', `Bearer ${Authentication.getToken()}`);
-                    fetchOptions.headers = headers;
-                    
-                    // Retry request
-                    response = await fetch(url, fetchOptions);
-                } else {
-                    console.error('[AUTH] Refresh failed after 401, logging out.');
-                    Authentication.logout();
-                    throw new Error('Session expired. Please login again.');
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/refresh-token`, {
+                method: 'POST',
+                credentials: 'include', // CRITICAL: Send HttpOnly cookie
+                headers: {
+                    'Content-Type': 'application/json'
                 }
-            }
+            });
 
-            return response;
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Store the new token (use localStorage if old token was there, else sessionStorage)
+                const rememberMe = !!localStorage.getItem('accessToken');
+                this.setToken(data.token, data.expiresOn, rememberMe);
+                
+                return true;
+            } else {
+                // Refresh failed - clear tokens
+                this.removeToken();
+                return false;
+            }
         } catch (error) {
-            throw error;
-        } finally {
-            if (showSpinner) Authentication.hideLoading();
+            console.error('Token refresh failed:', error);
+            this.removeToken();
+            return false;
         }
     },
 
-    ensureValidToken: async () => {
-        const token = Authentication.getToken();
-        if (!token) return;
+    // ==================== FETCH WITH AUTH ====================
+    // Automatically adds Authorization header and handles 401 with refresh
 
-        const exp = Authentication.getTokenExpiration(token);
-        if (!exp) return;
+    async fetchWithAuth(url, options = {}) {
+        // STEP 1: Check and refresh token BEFORE making the request
+        const tokenValid = await this.checkAndRefreshToken();
+        if (!tokenValid) {
+            this.logout();
+            throw new Error('Authentication failed');
+        }
 
-        const now = Date.now();
-        
-        // If token is expired, refresh immediately
-        if (now >= exp) {
-            console.log('[AUTH] Token expired, refreshing before request...');
-            const success = await Authentication.refreshToken();
-            if (!success) {
-                console.error('[AUTH] Failed to refresh expired token, logging out.');
-                Authentication.logout();
+        // STEP 2: Add Authorization header
+        const token = this.getToken();
+        options.headers = options.headers || {};
+        options.headers['Authorization'] = `Bearer ${token}`;
+        options.credentials = 'include'; // Always include cookies
+
+        // STEP 3: Make the request
+        let response = await fetch(url, options);
+
+        // STEP 4: If 401, try to refresh ONCE and retry
+        if (response.status === 401) {
+            const refreshed = await this.refreshAccessToken();
+            
+            if (refreshed) {
+                // Retry the original request with new token
+                const newToken = this.getToken();
+                options.headers['Authorization'] = `Bearer ${newToken}`;
+                response = await fetch(url, options);
+            } else {
+                // Refresh failed - logout
+                this.logout();
                 throw new Error('Session expired');
             }
         }
+
+        return response;
     },
 
-    // --- API Calls ---
+    // ==================== LOGIN ====================
 
-    login: async (email, password, rememberMe) => {
-        Authentication.showLoading();
-        const formData = new FormData();
-        formData.append('Email', email);
-        formData.append('Password', password);
-
+    async login(email, password, rememberMe = false) {
         try {
-            const response = await fetch(`${API_BASE_URL}/login`, {
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('password', password);
+
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/login`, {
                 method: 'POST',
                 body: formData,
-                credentials: 'include' // Required to receive HttpOnly refresh token cookie
+                credentials: 'include' // CRITICAL: Receive HttpOnly cookie
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Login failed');
-            }
-
-            const data = await response.json();
-            
-            // Handle both PascalCase (backend DTO) and camelCase (default JSON serialization)
-            const token = data.token || data.Token;
-
-            if (token) {
-                Authentication.setToken(token, rememberMe);
+            if (response.ok) {
+                const data = await response.json();
+                
+                // Store access token
+                this.setToken(data.token, data.expiresOn, rememberMe);
+                
+                // Get role from token
+                const role = this.getRole();
+                
+                return {
+                    success: true,
+                    role: role
+                };
             } else {
-                console.error('[AUTH] Login response missing token:', data);
-                throw new Error('Invalid server response');
-            }
-
-            return { success: true, role: Authentication.getUserRole() };
-        } catch (error) {
-            return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
-        }
-    },
-
-    registerCustomer: async (customerData) => {
-        Authentication.showLoading();
-        const formData = new FormData();
-        for (const key in customerData) formData.append(key, customerData[key]);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/register-customer`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(errorText || 'Registration failed');
+                return {
+                    success: false,
+                    message: errorText || 'Login failed'
+                };
             }
-
-            return { success: true };
         } catch (error) {
-            return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
+            return {
+                success: false,
+                message: error.message || 'Network error'
+            };
         }
     },
 
-    registerMerchant: async (merchantData) => {
-        Authentication.showLoading();
-        const formData = new FormData();
-        for (const key in merchantData) formData.append(key, merchantData[key]);
+    // ==================== LOGOUT ====================
 
-        try {
-            const response = await fetch(`${API_BASE_URL}/register-merchant`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Registration failed');
-            }
-
-            const data = await response.json();
-
-            // --- Merchant flow ---
-            // Return data so caller can handle redirection
-            return { success: true, data: data };
-        } catch (error) {
-            return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
-        }
-    },
-
-    addCategory: async (userId, categories) => {
-        Authentication.showLoading();
-        try {
-            const response = await fetch(`${API_BASE_URL}/add-category`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userId: userId, restaurantCategories: categories }),
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to add categories');
-            }
-
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
-        }
-    },
-
-    refreshToken: async () => {
-        // Don't show global loading for background refresh to avoid interrupting user
-        try {
-            console.log('[AUTH] Attempting token refresh...');
-            const response = await fetch(`${API_BASE_URL}/refresh-token`, {
-                method: 'POST',
-                credentials: 'include' // CRITICAL: Ensure cookies are sent with the request
-            });
-
-            // Only return true if response is 200 OK
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('[AUTH] Refresh token failed:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    error: errorText
-                });
-                return false;
-            }
-
-            const data = await response.json();
-            
-            // Handle both PascalCase and camelCase
-            const token = data.token || data.Token;
-
-            if (token) {
-                // Preserve storage type (localStorage or sessionStorage)
-                const isLocal = !!localStorage.getItem('accessToken');
-                Authentication.setToken(token, isLocal);
-                console.log('[AUTH] ✓ Token refreshed successfully');
-                return true;
-            }
-            console.error('[AUTH] Refresh response missing token:', data);
-            return false;
-        } catch (error) {
-            console.error('[AUTH] Token refresh failed (network error):', error);
-            return false;
-        }
-    },
-
-    // tryAutoLogin: async () => {
-    //     // Try to auto-login using refresh token on page load
-    //     // This enables persistent login even after browser restart
-    //     const token = Authentication.getToken();
-        
-    //     // If no token, OR token is expired, try to refresh
-    //     let shouldRefresh = !token;
-
-    //     if (token) {
-    //          const exp = Authentication.getTokenExpiration(token);
-    //          if (!exp || Date.now() >= exp) {
-    //              shouldRefresh = true;
-    //          }
-    //     }
-
-    //     if (shouldRefresh) {
-    //         console.log('[AUTH] No valid token found on load, attempting auto-refresh via cookie...');
-    //         const refreshSuccess = await Authentication.refreshToken();
-            
-    //         if (!refreshSuccess) {
-    //             // Refresh failed - log user out silently
-    //             console.log('[AUTH] ✗ Auto-refresh failed, logging out');
-    //             Authentication.clearToken();
-    //             return false;
-    //         }
-    //         console.log('[AUTH] ✓ Auto-login successful via refresh token');
-    //         return true;
-    //     }
-        
-    //     // Token is valid
-    //     console.log('[AUTH] ✓ Token valid on load');
-    //     return true;
-    // },
-
-    submitForgetPasswordRequest: async (email) => {
-        Authentication.showLoading();
-        const formData = new FormData();
-        formData.append('Email', email);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/submit-forget-password-request`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to send request');
-            }
-
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
-        }
-    },
-
-    resetPassword: async (code, newPassword) => {
-        Authentication.showLoading();
-        const formData = new FormData();
-        formData.append('Code', code);
-        formData.append('NewPassword', newPassword);
-
-        try {
-            const response = await fetch(`${API_BASE_URL}/reset-password`, {
-                method: 'POST',
-                body: formData,
-                credentials: 'include'
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to reset password');
-            }
-
-            return { success: true };
-        } catch (error) {
-            return { success: false, message: error.message };
-        } finally {
-            Authentication.hideLoading();
-        }
-    },
-
-    verifyEmailRequest: async () => {
-        try {
-            const response = await Authentication.fetchWithAuth(`${API_BASE_URL}/verify-email-request`, {
-                method: 'POST',
-                showSpinner: true
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to send verification email');
-            }
-
-            return { success: true, message: await response.text() };
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    },
-
-    verifyEmail: async (code) => {
-        const formData = new FormData();
-        formData.append('Code', code);
-
-        try {
-            const response = await Authentication.fetchWithAuth(`${API_BASE_URL}/verify-email`, {
-                method: 'POST',
-                body: formData,
-                showSpinner: true
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to verify email');
-            }
-
-            return { success: true, message: await response.text() };
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    },
-
-    changePassword: async (currentPassword, newPassword) => {
-        const formData = new FormData();
-        formData.append('CurrentPassword', currentPassword);
-        formData.append('NewPassword', newPassword);
-
-        try {
-            const response = await Authentication.fetchWithAuth(`${API_BASE_URL}/change-password`, {
-                method: 'POST',
-                body: formData,
-                showSpinner: true
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to change password');
-            }
-
-            return { success: true, message: 'Password changed successfully' };
-        } catch (error) {
-            return { success: false, message: error.message };
-        }
-    },
-
-    logout: () => {
-        Authentication.clearToken();
+    logout() {
+        this.removeToken();
         window.location.href = 'Login.html';
     },
 
-    // --- UI Helpers ---
-    updateHeader: () => {
-        const isLoggedIn = Authentication.isAuthenticated();
-        const loginBtn = document.querySelector('a[href*="Login"]');
-        const registerBtn = document.querySelector('a[href*="Register"]');
-        const profileDropdown = document.getElementById('drop');
+    // ==================== ROLE PROTECTION ====================
 
-        if (isLoggedIn) {
-            if (loginBtn) loginBtn.classList.add('d-none');
-            if (registerBtn) registerBtn.classList.add('d-none');
-            if (profileDropdown) profileDropdown.classList.remove('d-none');
-        } else {
-            if (loginBtn) loginBtn.classList.remove('d-none');
-            if (registerBtn) registerBtn.classList.remove('d-none');
-            if (profileDropdown) profileDropdown.classList.add('d-none');
+    requireRole(requiredRole) {
+        const role = this.getRole();
+        if (!role || role !== requiredRole) {
+            this.logout();
         }
+    },
 
-        const logoutLink = document.getElementById('logout');
-        if (logoutLink) {
-            logoutLink.onclick = (e) => {
-                e.preventDefault();
-                Authentication.logout();
+    // ==================== UI HELPERS ====================
+
+    updateHeader() {
+        const token = this.getToken();
+        const authButtons = document.getElementById('authButtons');
+        const dropdown = document.getElementById('drop');
+
+        if (token) {
+            // User is logged in
+            if (authButtons) authButtons.classList.add('d-none');
+            if (dropdown) dropdown.classList.remove('d-none');
+            
+            // Set up logout button
+            const logoutBtn = document.getElementById('logout');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.logout();
+                });
+            }
+        } else {
+            // User is not logged in
+            if (authButtons) authButtons.classList.remove('d-none');
+            if (dropdown) dropdown.classList.add('d-none');
+        }
+    },
+
+    // ==================== CHANGE PASSWORD ====================
+
+    async changePassword(currentPassword, newPassword) {
+        try {
+            const formData = new FormData();
+            formData.append('currentPassword', currentPassword);
+            formData.append('newPassword', newPassword);
+
+            const response = await this.fetchWithAuth(`${CONFIG.API_BASE_URL}/Authentication/change-password`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (response.ok || response.status === 204) {
+                return { success: true };
+            } else {
+                const errorText = await response.text();
+                return {
+                    success: false,
+                    message: errorText || 'Failed to change password'
+                };
+            }
+        } catch (error) {
+            return {
+                success: false,
+                message: error.message || 'Network error'
             };
         }
     }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    Authentication.updateHeader();
-});
+// Make it globally available
+window.Authentication = Authentication;

@@ -459,8 +459,26 @@ async function submitWizardProduct() {
         
         // Step 3: Set main image if images were uploaded
         if (imageUploadResult.photoIds && imageUploadResult.photoIds.length > 0) {
-            const mainPhotoId = imageUploadResult.photoIds[wizardState.productData.mainImageIndex];
-            await setMainProductImage(mainPhotoId);
+            console.log('Photo IDs returned:', imageUploadResult.photoIds);
+            
+            // Ensure we have a valid index
+            let mainIndex = wizardState.productData.mainImageIndex;
+            if (mainIndex < 0 || mainIndex >= imageUploadResult.photoIds.length) {
+                mainIndex = 0; // Default to first if invalid
+            }
+
+            const mainPhotoId = imageUploadResult.photoIds[mainIndex];
+            console.log('Selected Main Photo ID:', mainPhotoId, 'at index:', mainIndex);
+            
+            if (mainPhotoId) {
+                const setMainResult = await setMainProductImage(mainPhotoId);
+                if (!setMainResult) {
+                    console.error('Failed to set main photo');
+                    // Don't block success message, but log it
+                }
+            } else {
+                console.error('Main photo ID is undefined');
+            }
         }
     }
     
@@ -479,18 +497,35 @@ async function uploadProductImages(productId) {
     formData.append('ProductId', productId.toString());
     
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/Photos/add-product-photos`, {
+        // Use fetchWithAuth for proper authentication and token refresh
+        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Photos/add-product-photos`, {
             method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${Authentication.getToken()}`
-            },
             body: formData
         });
         
         if (response.ok) {
-            const data = await response.json();
-            // Backend returns PhotoResultDto with array of uploaded photo IDs
-            return { success: true, photoIds: data.photoIds || data };
+            const result = await response.json();
+            console.log('Upload response:', result);
+            
+            // Backend returns List<GetPhotosDto> directly (Array)
+            // Each GetPhotosDto has: { url: string, UrlId: int } (PascalCase in DTO)
+            
+            let photoIds = [];
+            
+            if (Array.isArray(result)) {
+                // Direct array return
+                photoIds = result.map(photo => photo.UrlId || photo.urlId);
+            } else if (result.isSuccess && result.data && Array.isArray(result.data)) {
+                // Enveloped return (fallback)
+                photoIds = result.data.map(photo => photo.UrlId || photo.urlId);
+            } else {
+                console.error('Upload failed: Unexpected response format', result);
+                return { success: false };
+            }
+            
+            console.log('Parsed Photo IDs:', photoIds);
+            return { success: true, photoIds: photoIds };
+
         } else {
             return { success: false };
         }
@@ -503,12 +538,11 @@ async function uploadProductImages(productId) {
 // Set main product image
 async function setMainProductImage(photoId) {
     try {
-        const response = await fetch(`${CONFIG.API_BASE_URL}/Photos/set-photo-main/${photoId}`, {
-            method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${Authentication.getToken()}`,
-                'Content-Type': 'application/json'
-            }
+        // Use fetchWithAuth for proper authentication and token refresh
+        // Endpoint: PUT /api/Photos/set-photo-main/{id}
+        // No body required, ID is in URL
+        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Photos/set-photo-main/${photoId}`, {
+            method: 'PUT'
         });
         
         return response.ok;

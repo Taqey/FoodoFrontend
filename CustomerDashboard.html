@@ -329,7 +329,16 @@
         let currentOrderId = null;
         let currentProfile = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            // CRITICAL: Check and refresh token BEFORE anything else
+            // This ensures manual browser refresh works correctly
+            const tokenValid = await Authentication.checkAndRefreshToken();
+            if (!tokenValid) {
+                Authentication.logout();
+                return;
+            }
+
+            // Now proceed with normal initialization
             Authentication.requireRole('Customer');
             Authentication.updateHeader();
 
@@ -338,7 +347,10 @@
 
             loadOrders();
 
-            if (window.location.hash === '#orders') {
+            // Fix for Bug #5: Handle #profile hash correctly
+            if (window.location.hash === '#profile') {
+                showTab('profile');
+            } else if (window.location.hash === '#orders') {
                 showTab('orders');
             }
 
@@ -375,7 +387,7 @@
 
         function displayProfile(profile) {
             // Personal Information
-            document.getElementById('profileName').textContent = `${profile.firstName} ${profile.lastName}`;
+            document.getElementById('profileName').textContent = `${profile.firstName} ${profile.lastName} `;
             document.getElementById('profileGender').textContent = profile.gender || '-';
             document.getElementById('profileBirthDate').textContent = profile.birthDate || '-';
 
@@ -409,7 +421,7 @@
                 const card = document.createElement('div');
                 card.className = 'card mb-2 p-3';
                 card.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
+            < div class="d-flex justify-content-between align-items-start" >
                         <div>
                             <p class="mb-1"><strong>${address.streetAddress}</strong></p>
                             <p class="mb-1">${address.city}, ${address.state} ${address.postalCode}</p>
@@ -420,8 +432,8 @@
                             ${!address.isDefault ? `<button class="btn btn-outline-primary btn-sm" onclick="setAsDefault(${address.id})">Set as Default</button>` : ''}
                             <button class="btn btn-outline-danger btn-sm" onclick="removeAddress(${address.id})">Remove</button>
                         </div>
-                    </div>
-                `;
+                    </div >
+            `;
                 container.appendChild(card);
             });
         }
@@ -539,7 +551,7 @@
             const result = await CustomerService.getAllOrders(currentPage, pageSize);
             currentOrders = result.items || [];
             renderOrders(currentOrders);
-            document.getElementById('ordersPageInfo').textContent = `Page ${currentPage}`;
+            document.getElementById('ordersPageInfo').textContent = `Page ${currentPage} `;
         }
 
         function renderOrders(orders) {
@@ -560,7 +572,7 @@
                 const status = o.status;
 
                 row.innerHTML = `
-                    <td>#${orderId}</td>
+            < td > #${orderId}</td >
                     <td>${restaurant}</td>
                     <td>${date}</td>
                     <td>$${total}</td>
@@ -568,7 +580,7 @@
                     <td>
                         <button class="btn btn-sm btn-outline-primary" onclick="viewOrder(${orderId})">View</button>
                     </td>
-                `;
+        `;
                 tbody.appendChild(row);
             });
         }
@@ -620,7 +632,7 @@
                 order.orderItems.forEach(item => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${item.itemName}</td>
+            < td > ${item.itemName}</td >
                         <td>$${item.price}</td>
                         <td>${item.quantity}</td>
                         <td>$${(item.price * item.quantity).toFixed(2)}</td>

@@ -522,8 +522,29 @@
                         <div id="editAttributesList" class="d-flex flex-wrap gap-2 mb-2">
                             <!-- Existing attributes displayed here as badges -->
                         </div>
-                        <small class="text-muted">Note: To modify attributes, delete and re-add them after
-                            saving.</small>
+
+                        <!-- Add New Attribute Section -->
+                        <div class="card p-3 mt-2">
+                            <h6 class="mb-3">Add New Attribute</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="editNewAttributeName"
+                                        placeholder="Attribute Name">
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="text" class="form-control form-control-sm" id="editNewAttributeValue"
+                                        placeholder="Value">
+                                </div>
+                                <div class="col-md-3">
+                                    <input type="text" class="form-control form-control-sm" id="editNewAttributeUnit"
+                                        placeholder="Unit (optional)">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-sm btn-success w-100"
+                                        onclick="addAttributeToEditProduct()">+</button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">

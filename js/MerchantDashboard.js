@@ -79,7 +79,16 @@ let addAddressModal;
 let currentOrders = [];
 let orderModalInstance;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // CRITICAL: Check and refresh token BEFORE anything else
+    // This ensures manual browser refresh works correctly
+    const tokenValid = await Authentication.checkAndRefreshToken();
+    if (!tokenValid) {
+        Authentication.logout();
+        return;
+    }
+    
+    // Now proceed with normal initialization
     Authentication.requireRole('Merchant');
     Authentication.updateHeader();
 
@@ -333,6 +342,44 @@ async function saveEditedProduct() {
         loadProducts();
     } else {
         alert(result.message || 'Failed to update product');
+    }
+}
+
+// Add attribute to product being edited
+async function addAttributeToEditProduct() {
+    const productId = document.getElementById('editProductId').value;
+    const name = document.getElementById('editNewAttributeName').value.trim();
+    const value = document.getElementById('editNewAttributeValue').value.trim();
+    const unit = document.getElementById('editNewAttributeUnit').value.trim();
+
+    if (!name || !value) {
+        alert('Please enter attribute name and value.');
+        return;
+    }
+
+    const attributesList = [{
+        Name: name,
+        Value: value,
+        MeasurementUnit: unit || ''
+    }];
+
+    const result = await MerchantService.addAttribute(productId, attributesList);
+    if (result.success) {
+        // Clear input fields
+        document.getElementById('editNewAttributeName').value = '';
+        document.getElementById('editNewAttributeValue').value = '';
+        document.getElementById('editNewAttributeUnit').value = '';
+        
+        // Reload product data to show new attribute
+        const product = await MerchantService.getProductById(productId);
+        renderEditAttributesList(product.attributes);
+        
+        // Also refresh the main products list
+        loadProducts();
+        
+        alert('Attribute added successfully!');
+    } else {
+        alert(result.message || 'Failed to add attribute');
     }
 }
 
