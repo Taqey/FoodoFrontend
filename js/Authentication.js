@@ -58,10 +58,9 @@ const Authentication = {
     async checkAndRefreshToken() {
         const token = this.getToken();
         
-        // If no token exists, try to refresh using HttpOnly cookie
+        // If no token exists, return false (user is not logged in)
         if (!token) {
-            const refreshed = await this.refreshAccessToken();
-            return refreshed;
+            return false;
         }
         
         // If token exists but is expired, refresh it
@@ -107,12 +106,13 @@ const Authentication = {
     },
 
     // ==================== FETCH WITH AUTH ====================
-    // Automatically adds Authorization header and handles 401 with refresh
+    // Simple: check token before request, add auth header, make request
 
     async fetchWithAuth(url, options = {}) {
-        // STEP 1: Check and refresh token BEFORE making the request
+        // STEP 1: Check if token is valid (refresh if expired)
         const tokenValid = await this.checkAndRefreshToken();
         if (!tokenValid) {
+            // No token or refresh failed - logout
             this.logout();
             throw new Error('Authentication failed');
         }
@@ -124,22 +124,12 @@ const Authentication = {
         options.credentials = 'include'; // Always include cookies
 
         // STEP 3: Make the request
-        let response = await fetch(url, options);
+        const response = await fetch(url, options);
 
-        // STEP 4: If 401, try to refresh ONCE and retry
+        // STEP 4: If 401, token is invalid - logout
         if (response.status === 401) {
-            const refreshed = await this.refreshAccessToken();
-            
-            if (refreshed) {
-                // Retry the original request with new token
-                const newToken = this.getToken();
-                options.headers['Authorization'] = `Bearer ${newToken}`;
-                response = await fetch(url, options);
-            } else {
-                // Refresh failed - logout
-                this.logout();
-                throw new Error('Session expired');
-            }
+            this.logout();
+            throw new Error('Session expired');
         }
 
         return response;
