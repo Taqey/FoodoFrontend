@@ -278,6 +278,123 @@ const Authentication = {
                 message: error.message || 'Network error'
             };
         }
+    },  
+      showLoading: () => {
+        let spinner = document.getElementById('global-spinner');
+        if (!spinner) {
+            spinner = document.createElement('div');
+            spinner.id = 'global-spinner';
+            spinner.innerHTML = `
+                <div class="spinner-overlay">
+                    <div class="spinner-border text-warning" role="status" style="width: 3rem; height: 3rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <style>
+                    .spinner-overlay {
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(255, 255, 255, 0.8);
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        z-index: 9999;
+                        backdrop-filter: blur(2px);
+                    }
+                </style>
+            `;
+            document.body.appendChild(spinner);
+        }
+        spinner.style.display = 'block';
+        document.body.style.pointerEvents = 'none';
+    },
+
+    hideLoading: () => {
+        const spinner = document.getElementById('global-spinner');
+        if (spinner) {
+            spinner.style.display = 'none';
+        }
+        document.body.style.pointerEvents = 'auto';
+    },
+    
+    registerCustomer: async (customerData) => {
+        Authentication.showLoading();
+        const formData = new FormData();
+        for (const key in customerData) formData.append(key, customerData[key]);
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/register-customer`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Registration failed');
+            }
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    registerMerchant: async (merchantData) => {
+        Authentication.showLoading();
+        const formData = new FormData();
+        for (const key in merchantData) formData.append(key, merchantData[key]);
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/register-merchant`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Registration failed');
+            }
+
+            const data = await response.json();
+
+            // --- Merchant flow ---
+            // Return data so caller can handle redirection
+            return { success: true, data: data };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    addCategory: async (userId, categories) => {
+        Authentication.showLoading();
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/add-category`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userId, restaurantCategories: categories }),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to add categories');
+            }
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
     },
 
     /**
