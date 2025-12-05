@@ -396,6 +396,56 @@ const Authentication = {
             Authentication.hideLoading();
         }
     },
+    submitForgetPasswordRequest: async (email) => {
+        Authentication.showLoading();
+        const formData = new FormData();
+        formData.append('Email', email);
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/submit-forget-password-request`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to send request');
+            }
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
+
+    resetPassword: async (code, newPassword) => {
+        Authentication.showLoading();
+        const formData = new FormData();
+        formData.append('Code', code);
+        formData.append('NewPassword', newPassword);
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Authentication/reset-password`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(errorText || 'Failed to reset password');
+            }
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: error.message };
+        } finally {
+            Authentication.hideLoading();
+        }
+    },
 
     /**
      * Verifies the user's email using the provided code
