@@ -9,8 +9,9 @@ const ProfileService = {
      */
     getCustomerProfile: async () => {
         try {
+            // Backend: GET /Customers/profile
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/CustomerProfile/get-customer-profile`,
+                `${PROFILE_API_BASE_URL}/Customers/profile`,
                 { 
                     method: 'GET',
                     showSpinner: true 
@@ -22,6 +23,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to fetch customer profile');
             }
 
+            // Backend returns raw profile data (not wrapped)
             return { success: true, data: await response.json() };
         } catch (error) {
             console.error('[ProfileService] getCustomerProfile error:', error);
@@ -31,17 +33,18 @@ const ProfileService = {
 
     /**
      * Adds one or more addresses to customer profile
-     * @param {Array} addresses - Array of address objects with city, state, streetAddress, postalCode, country
+     * @param {Object} addressData - Address object with city, state, streetAddress, postalCode, country
      * @returns {Promise<Object>} Success status and message
      */
-    addCustomerAddress: async (addresses) => {
+    addCustomerAddress: async (addressData) => {
         try {
+            // Backend: POST /Adresses with JSON body (single address)
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/CustomerProfile/add-adress`,
+                `${PROFILE_API_BASE_URL}/Adresses`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ adresses: addresses }),
+                    body: JSON.stringify(addressData),
                     showSpinner: true
                 }
             );
@@ -51,6 +54,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to add address');
             }
 
+            // Backend returns plain text message
             const message = await response.text();
             return { success: true, message: message };
         } catch (error) {
@@ -66,8 +70,9 @@ const ProfileService = {
      */
     deleteCustomerAddress: async (addressId) => {
         try {
+            // Backend: DELETE /Adresses/{id}
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/CustomerProfile/delete-adress/${addressId}`,
+                `${PROFILE_API_BASE_URL}/Adresses/${addressId}`,
                 {
                     method: 'DELETE',
                     showSpinner: true
@@ -79,6 +84,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to delete address');
             }
 
+            // Backend returns plain text message
             const message = await response.text();
             return { success: true, message: message };
         } catch (error) {
@@ -94,8 +100,9 @@ const ProfileService = {
      */
     setDefaultAddress: async (addressId) => {
         try {
+            // Backend: PUT /Adresses/{id}/default (Customer only)
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/CustomerProfile/set-adress-default/${addressId}`,
+                `${PROFILE_API_BASE_URL}/Adresses/${addressId}/default`,
                 {
                     method: 'PUT',
                     showSpinner: true
@@ -107,6 +114,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to set default address');
             }
 
+            // Backend returns plain text message
             const message = await response.text();
             return { success: true, message: message };
         } catch (error) {
@@ -123,8 +131,9 @@ const ProfileService = {
      */
     getMerchantProfile: async () => {
         try {
+            // Backend: GET /Restaurants/profile
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/MerchantProfile/get-merchant-profile`,
+                `${PROFILE_API_BASE_URL}/Restaurants/profile`,
                 {
                     method: 'GET',
                     showSpinner: true
@@ -136,6 +145,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to fetch merchant profile');
             }
 
+            // Backend returns raw profile data (not wrapped)
             return { success: true, data: await response.json() };
         } catch (error) {
             console.error('[ProfileService] getMerchantProfile error:', error);
@@ -145,17 +155,18 @@ const ProfileService = {
 
     /**
      * Adds one or more addresses to merchant profile
-     * @param {Array} addresses - Array of address objects with city, state, streetAddress, postalCode, country
+     * @param {Object} addressData - Address object with city, state, streetAddress, postalCode, country
      * @returns {Promise<Object>} Success status and message
      */
-    addMerchantAddress: async (addresses) => {
+    addMerchantAddress: async (addressData) => {
         try {
+            // Backend: POST /Adresses with JSON body (same as customer)
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/MerchantProfile/add-adress`,
+                `${PROFILE_API_BASE_URL}/Adresses`,
                 {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ adresses: addresses }),
+                    body: JSON.stringify(addressData),
                     showSpinner: true
                 }
             );
@@ -165,6 +176,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to add address');
             }
 
+            // Backend returns plain text message
             const message = await response.text();
             return { success: true, message: message };
         } catch (error) {
@@ -180,8 +192,9 @@ const ProfileService = {
      */
     deleteMerchantAddress: async (addressId) => {
         try {
+            // Backend: DELETE /Adresses/{id} (same as customer)
             const response = await Authentication.fetchWithAuth(
-                `${PROFILE_API_BASE_URL}/MerchantProfile/delete-adress/${addressId}`,
+                `${PROFILE_API_BASE_URL}/Adresses/${addressId}`,
                 {
                     method: 'DELETE',
                     showSpinner: true
@@ -193,6 +206,7 @@ const ProfileService = {
                 throw new Error(errorText || 'Failed to delete address');
             }
 
+            // Backend returns plain text message
             const message = await response.text();
             return { success: true, message: message };
         } catch (error) {

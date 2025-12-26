@@ -1,17 +1,19 @@
-const CUSTOMER_API_URL = (typeof CONFIG !== 'undefined' ? CONFIG.API_BASE_URL : 'https://foodo.runasp.net/api') + '/Customers';
+// Customer Service JavaScript
 
 const CustomerService = {
-    // --- Shops ---
+    // --- Shops/Restaurants ---
     getAllShops: async (pageNumber = 1, pageSize = 10) => {
         try {
             // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-all-shops`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
+            // Backend: GET /Restaurants?pageNumber={}&pageSize={}
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Restaurants?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+                method: 'GET'
             });
-            if (!response.ok) throw new Error('Failed to fetch shops');
-            return await response.json();
+            if (!response.ok) throw new Error('Failed to fetch restaurants');
+            
+            // Backend returns: {message, traceId, data: {items, ...}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0 };
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 };
@@ -21,13 +23,15 @@ const CustomerService = {
     getAllShopsByCategory: async (category, pageNumber = 1, pageSize = 10) => {
         try {
             // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-all-shops-by-category`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize })
+            // Backend: GET /Restaurants?pageNumber={}&pageSize={}&categoryId={}
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Restaurants?pageNumber=${pageNumber}&pageSize=${pageSize}&categoryId=${category}`, {
+                method: 'GET'
             });
-            if (!response.ok) throw new Error('Failed to fetch shops by category');
-            return await response.json();
+            if (!response.ok) throw new Error('Failed to fetch restaurants by category');
+            
+            // Backend returns: {message, traceId, data: {items, ...}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0 };
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 };
@@ -37,9 +41,15 @@ const CustomerService = {
     getShopById: async (id) => {
         try {
             // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-shop-by-id/${id}`);
-            if (!response.ok) throw new Error('Failed to fetch shop details');
-            return await response.json();
+            // Backend: GET /Restaurants/{id}
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Restaurants/${id}`, {
+                method: 'GET'
+            });
+            if (!response.ok) throw new Error('Failed to fetch restaurant details');
+            
+            // Backend returns: {message, traceId, data: {...}}
+            const result = await response.json();
+            return result.data || null;
         } catch (error) {
             console.error(error);
             return null;
@@ -47,59 +57,79 @@ const CustomerService = {
     },
 
     // --- Products ---
-    getAllProducts: async (pageNumber = 1, pageSize = 10) => {
+    
+    /**
+     * UNIFIED PRODUCT FETCHING METHOD
+     * Fetches products with flexible filtering using query parameters.
+     * Supports pagination, category, restaurant filtering, and sorting.
+     * 
+     * @param {Object} options - Filter and pagination options
+     * @param {number} options.pageNumber - Page number (default: 1)
+     * @param {number} options.pageSize - Page size (default: 10)
+     * @param {number} options.categoryId - Optional category filter (FoodCategory enum value)
+     * @param {string} options.restaurantId - Optional restaurant filter
+     * @param {string} options.orderBy - Optional sort field (e.g., 'price', 'name')
+     * @param {string} options.direction - Optional sort direction ('asc' or 'desc')
+     * @returns {Promise<{items: Array, totalItems: number, totalPages: number, currentPage: number, pageSize: number}>}
+     */
+    getProducts: async (options = {}) => {
+        const {
+            pageNumber = 1,
+            pageSize = 10,
+            categoryId = null,
+            restaurantId = null,
+            orderBy = null,
+            direction = null
+        } = options;
+        
         try {
-            // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-all-products`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize })
+            // Build query parameters dynamically
+            const params = new URLSearchParams({
+                pageNumber: pageNumber.toString(),
+                pageSize: pageSize.toString()
             });
+            
+            // Add optional filters
+            if (categoryId) params.append('categoryId', categoryId.toString());
+            if (restaurantId) params.append('restaurantId', restaurantId.toString());
+            
+            // Add sorting parameters
+            if (orderBy) params.append('orderBy', orderBy);
+            
+            // Map 'asc'/'desc' to Backend Enum 'Ascending'/'Descending'
+            if (direction) {
+                const map = { 'asc': 'Ascending', 'desc': 'Descending' };
+                const backendValue = map[direction.toLowerCase()] || direction; // Fallback to as-is if not mapped
+                params.append('orderingDirection', backendValue);
+            }
+            
+            // Single unified endpoint call
+            const response = await fetch(
+                `${CONFIG.API_BASE_URL}/Products?${params.toString()}`,
+                { method: 'GET' }
+            );
+            
             if (!response.ok) throw new Error('Failed to fetch products');
-            return await response.json();
+            
+            // Backend returns: {message, traceId, data: {items, totalPages, currentPage, pageSize, totalItems}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0, totalPages: 0, currentPage: pageNumber, pageSize: pageSize };
         } catch (error) {
-            console.error(error);
-            return { items: [], totalItems: 0 };
-        }
-    },
-
-    getAllProductsByCategory: async (category, pageNumber = 1, pageSize = 10) => {
-        try {
-            // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-all-products-by-category`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ Category: category, PageNumber: pageNumber, PageSize: pageSize })
-            });
-            if (!response.ok) throw new Error('Failed to fetch products by category');
-            return await response.json();
-        } catch (error) {
-            console.error(error);
-            return { items: [], totalItems: 0 };
-        }
-    },
-
-    getAllProductsByRestaurant: async (restaurantId, pageNumber = 1, pageSize = 10) => {
-        try {
-            // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-all-products-by-restaurant`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ MerchantId: restaurantId, Page: pageNumber, PageSize: pageSize })
-            });
-            if (!response.ok) throw new Error('Failed to fetch products by restaurant');
-            return await response.json();
-        } catch (error) {
-            console.error(error);
-            return { items: [], totalItems: 0 };
+            console.error('[CustomerService] getProducts error:', error);
+            return { items: [], totalItems: 0, totalPages: 0, currentPage: pageNumber, pageSize: pageSize };
         }
     },
 
     getProductById: async (id) => {
         try {
             // Public endpoint - no auth required
-            const response = await fetch(`${CUSTOMER_API_URL}/get-product-by-id/${id}`);
+            // Backend: GET /Products/{id}
+            const response = await fetch(`${CONFIG.API_BASE_URL}/Products/${id}`, {
+                method: 'GET'
+            });
             if (!response.ok) throw new Error('Failed to fetch product details');
+            
+            // Backend returns: raw product data (not wrapped in {message, traceId, data})
             return await response.json();
         } catch (error) {
             console.error(error);
@@ -110,21 +140,29 @@ const CustomerService = {
     // --- Orders ---
     placeOrder: async (orderData) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/place-order`, {
+            // Backend: POST /Orders with JSON body {items: [...]}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
-                    // Authorization header added automatically by fetchWithAuth
                 },
                 body: JSON.stringify(orderData),
                 showSpinner: true
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to place order');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to place order');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to place order');
+                }
             }
-            return { success: true, data: await response.json() };
+            
+            // Backend returns: {message, traceId} (no data returned for create)
+            return { success: true };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -132,16 +170,17 @@ const CustomerService = {
 
     getAllOrders: async (pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-all-orders`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+            // Backend: GET /Orders?pageNumber={}&pageSize={} (with customer auth)
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+                method: 'GET',
                 showSpinner: true
             });
+
             if (!response.ok) throw new Error('Failed to fetch orders');
-            return await response.json();
+            
+            // Backend returns: {message, traceId, data: {items, ...}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0 };
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 };
@@ -150,29 +189,44 @@ const CustomerService = {
 
     getOrderById: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/get-order-by-id/${id}`, {
+            // Backend: GET /Orders/{id}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders/${id}`, {
                 method: 'GET',
                 showSpinner: true
             });
-            if (!response.ok) throw new Error('Failed to fetch order details');
-            return await response.json();
+
+            if (!response.ok) throw new Error('Failed to fetch order');
+            
+            // Backend returns: {message, traceId, data: {...}}
+            const result = await response.json();
+            return result.data || null;
         } catch (error) {
             console.error(error);
             return null;
         }
     },
 
-    cancelOrder: async (orderId) => {
+    cancelOrder: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${CUSTOMER_API_URL}/cancel-order/${orderId}`, {
+            // Backend: DELETE /Orders/{id}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders/${id}`, {
                 method: 'DELETE',
                 showSpinner: true
             });
+
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to cancel order');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to cancel order');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to cancel order');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            return { success: true };
         } catch (error) {
             return { success: false, message: error.message };
         }

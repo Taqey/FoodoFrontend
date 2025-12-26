@@ -86,11 +86,11 @@ const Authentication = {
             });
 
             if (response.ok) {
-                const data = await response.json();
+                const result = await response.json();
                 
-                // Store the new token (use localStorage if old token was there, else sessionStorage)
+                // Backend returns: {message, traceId, data: {token, expiresOn, ...}}
                 const rememberMe = !!localStorage.getItem('accessToken');
-                this.setToken(data.token, data.expiresOn, rememberMe);
+                this.setToken(result.data.token, result.data.expiresOn, rememberMe);
                 
                 return true;
             } else {
@@ -150,10 +150,10 @@ const Authentication = {
             });
 
             if (response.ok) {
-                const data = await response.json();
+                const result = await response.json();
                 
-                // Store access token
-                this.setToken(data.token, data.expiresOn, rememberMe);
+                // Backend returns: {message, traceId, data: {token, expiresOn, ...}}
+                this.setToken(result.data.token, result.data.expiresOn, rememberMe);
                 
                 // Get role from token
                 const role = this.getRole();
@@ -163,11 +163,21 @@ const Authentication = {
                     role: role
                 };
             } else {
-                const errorText = await response.text();
-                return {
-                    success: false,
-                    message: errorText || 'Login failed'
-                };
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    return {
+                        success: false,
+                        message: errorData.message || 'Login failed'
+                    };
+                } catch {
+                    // Fallback to text if JSON parsing fails
+                    const errorText = await response.text();
+                    return {
+                        success: false,
+                        message: errorText || 'Login failed'
+                    };
+                }
             }
         } catch (error) {
             return {
@@ -236,11 +246,20 @@ const Authentication = {
             if (response.ok || response.status === 204) {
                 return { success: true };
             } else {
-                const errorText = await response.text();
-                return {
-                    success: false,
-                    message: errorText || 'Failed to change password'
-                };
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    return {
+                        success: false,
+                        message: errorData.message || 'Failed to change password'
+                    };
+                } catch {
+                    const errorText = await response.text();
+                    return {
+                        success: false,
+                        message: errorText || 'Failed to change password'
+                    };
+                }
             }
         } catch (error) {
             return {
@@ -263,14 +282,28 @@ const Authentication = {
             });
 
             if (response.ok) {
-                const message = await response.text();
-                return { success: true, message: message || 'Verification code sent' };
+                // Backend returns JSON: {message, traceId}
+                try {
+                    const result = await response.json();
+                    return { success: true, message: result.message || 'Verification code sent' };
+                } catch {
+                    return { success: true, message: 'Verification code sent' };
+                }
             } else {
-                const errorText = await response.text();
-                return {
-                    success: false,
-                    message: errorText || 'Failed to send verification code'
-                };
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    return {
+                        success: false,
+                        message: errorData.message || 'Failed to send verification code'
+                    };
+                } catch {
+                    const errorText = await response.text();
+                    return {
+                        success: false,
+                        message: errorText || 'Failed to send verification code'
+                    };
+                }
             }
         } catch (error) {
             return {
@@ -333,10 +366,17 @@ const Authentication = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Registration failed');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Registration failed');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Registration failed');
+                }
             }
 
+            // Backend returns: {message, traceId} (no data for customer registration)
             return { success: true };
         } catch (error) {
             return { success: false, message: error.message };
@@ -358,15 +398,20 @@ const Authentication = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Registration failed');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Registration failed');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Registration failed');
+                }
             }
 
-            const data = await response.json();
-
-            // --- Merchant flow ---
+            const result = await response.json();
+            // Backend returns: {message, traceId, data: {...}}
             // Return data so caller can handle redirection
-            return { success: true, data: data };
+            return { success: true, data: result.data };
         } catch (error) {
             return { success: false, message: error.message };
         } finally {
@@ -409,8 +454,14 @@ const Authentication = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to send request');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to send request');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to send request');
+                }
             }
 
             return { success: true };
@@ -435,8 +486,14 @@ const Authentication = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to reset password');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to reset password');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to reset password');
+                }
             }
 
             return { success: true };
@@ -463,14 +520,28 @@ const Authentication = {
             });
 
             if (response.ok) {
-                const message = await response.text();
-                return { success: true, message: message || 'Email verified successfully' };
+                // Backend returns JSON: {message, traceId}
+                try {
+                    const result = await response.json();
+                    return { success: true, message: result.message || 'Email verified successfully' };
+                } catch {
+                    return { success: true, message: 'Email verified successfully' };
+                }
             } else {
-                const errorText = await response.text();
-                return {
-                    success: false,
-                    message: errorText || 'Invalid or expired verification code'
-                };
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    return {
+                        success: false,
+                        message: errorData.message || 'Invalid or expired verification code'
+                    };
+                } catch {
+                    const errorText = await response.text();
+                    return {
+                        success: false,
+                        message: errorText || 'Invalid or expired verification code'
+                    };
+                }
             }
         } catch (error) {
             return {

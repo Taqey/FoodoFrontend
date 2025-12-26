@@ -92,6 +92,12 @@
                 <select id="categoryFilter" class="form-select" style="width: 200px;">
                     <option value="">All Categories</option>
                 </select>
+                <select id="pageSize" class="form-select" style="width: 150px;">
+                    <option value="10">10 / page</option>
+                    <option value="20">20 / page</option>
+                    <option value="50">50 / page</option>
+                    <option value="100">100 / page</option>
+                </select>
             </div>
         </div>
 
@@ -107,7 +113,7 @@
 
     <script>
         let currentPage = 1;
-        const pageSize = 12;
+        let pageSize = 10;
         let currentCategory = '';
 
         // RestaurantCategory enum values (string name => integer value)
@@ -140,6 +146,12 @@
 
             filter.addEventListener('change', (e) => {
                 currentCategory = e.target.value;
+                currentPage = 1;
+                loadShops();
+            });
+
+            document.getElementById('pageSize').addEventListener('change', (e) => {
+                pageSize = parseInt(e.target.value);
                 currentPage = 1;
                 loadShops();
             });

@@ -519,9 +519,8 @@ async function uploadProductImages(productId, images) {
     formData.append('ProductId', productId.toString());
     
     try {
-        // Use fetchWithAuth for proper authentication and token refresh
-        // Don't show spinner for background upload
-        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Photos/add-product-photos`, {
+        // Backend: POST /Products/{id}/photos with FormData
+        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${productId}/photos`, {
             method: 'POST',
             body: formData
         });
@@ -530,16 +529,16 @@ async function uploadProductImages(productId, images) {
             const result = await response.json();
             console.log('Upload response:', result);
             
-            // Backend returns List<GetPhotosDto> directly (Array)
-            // Each GetPhotosDto has: { url: string, UrlId: int } (PascalCase in DTO)
+            // Backend returns array of photo objects directly
+            // Each photo has: { url: string, UrlId: int } or { url: string, urlId: int }
             
             let photoIds = [];
             
             if (Array.isArray(result)) {
                 // Direct array return
                 photoIds = result.map(photo => photo.UrlId || photo.urlId);
-            } else if (result.isSuccess && result.data && Array.isArray(result.data)) {
-                // Enveloped return (fallback)
+            } else if (result.data && Array.isArray(result.data)) {
+                // Wrapped in {data: [...]}
                 photoIds = result.data.map(photo => photo.UrlId || photo.urlId);
             } else {
                 console.error('Upload failed: Unexpected response format', result);
@@ -561,10 +560,8 @@ async function uploadProductImages(productId, images) {
 // Set main product image
 async function setMainProductImage(photoId) {
     try {
-        // Use fetchWithAuth for proper authentication and token refresh
-        // Endpoint: PUT /api/Photos/set-photo-main/{id}
-        // No body required, ID is in URL
-        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Photos/set-photo-main/${photoId}`, {
+        // Backend: PUT /Products/{photoId}/photos/main (photoId is the ID of the photo)
+        const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${photoId}/photos/main`, {
             method: 'PUT'
         });
         

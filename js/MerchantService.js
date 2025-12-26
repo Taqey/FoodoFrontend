@@ -6,31 +6,33 @@ const MerchantService = {
 
     getAllProducts: async (pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-all-products`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+            // Backend: GET /Products?pageNumber={}&pageSize={} (with merchant auth)
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+                method: 'GET',
                 showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch products');
-            return await response.json();
+            
+            // Backend returns: {message, traceId, data: {items, ...}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0 };
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 }; // Return empty structure on error
+            return { items: [], totalItems: 0 };
         }
     },
 
     getProductById: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-product-by-id/${id}`, {
+            // Backend: GET /Products/{id}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${id}`, {
                 method: 'GET',
                 showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch product');
+            // Backend returns raw product data
             return await response.json();
         } catch (error) {
             console.error(error);
@@ -39,9 +41,10 @@ const MerchantService = {
     },
 
     createProduct: async (productData) => {
-        // productData: { productName, productDescription, price, attributes: [] }
+        // productData: { productName, productDescription, price, attributes: [], categories: [] }
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/create-product`, {
+            // Backend: POST /Products with JSON body
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -51,22 +54,28 @@ const MerchantService = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to create product');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to create product');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to create product');
+                }
             }
             
-            // Backend returns CreateProductDto with ProductId field
-            const data = await response.json();
-            return { success: true, data: data };
+            // Backend returns: {message, traceId} (no data returned for create)
+            return { success: true };
         } catch (error) {
             return { success: false, message: error.message };
         }
     },
 
     updateProduct: async (id, productData) => {
-        // productData: { productName, productDescription, price, attributes: [] }
+        // productData: { productName, productDescription, price }
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/update-product/${id}`, {
+            // Backend: PUT /Products/{id} with JSON body
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
@@ -76,10 +85,19 @@ const MerchantService = {
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to update product');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update product');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to update product');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -87,57 +105,89 @@ const MerchantService = {
 
     deleteProduct: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/delete-product/${id}`, {
+            // Backend: DELETE /Products/{id}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${id}`, {
                 method: 'DELETE',
                 showSpinner: true
             });
 
-            if (!response.ok) throw new Error('Failed to delete product');
-            return { success: true, message: await response.text() };
+            if (!response.ok) {
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to delete product');
+                } catch (parseError) {
+                    throw new Error('Failed to delete product');
+                }
+            }
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
     },
 
     addAttribute: async (productId, attributesList) => {
-        // attributesList: [{ name, value, measurementUnit }]
+        // attributesList: [{attributeName, attributeValue}]
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/add-attribute?id=${productId}`, {
+            // Backend: PUT /Products/{id}/attributes with JSON body {attributes: [...]}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${productId}/attributes`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Attributes: attributesList }),
+                body: JSON.stringify({ attributes: attributesList }),
                 showSpinner: true
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to add attribute');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to add attribute');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to add attribute');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
     },
 
-    removeAttribute: async (productId, attributeIds) => {
-        // attributeIds: [int, int]
+    removeAttribute: async (productId, attributesList) => {
+        // attributesList: [{attributeName, attributeValue}] (same format as add)
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/remove-attribute?id=${productId}`, {
-                method: 'PUT',
+            // Backend: DELETE /Products/{id}/attributes with JSON body {attributes: [...]}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${productId}/attributes`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Attributes: attributeIds }),
+                body: JSON.stringify({ attributes: attributesList }),
                 showSpinner: true
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to remove attribute');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to remove attribute');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to remove attribute');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -147,32 +197,36 @@ const MerchantService = {
 
     getAllOrders: async (pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-all-orders`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+            // Backend: GET /Orders?pageNumber={}&pageSize={} (with merchant auth)
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+                method: 'GET',
                 showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch orders');
-            return await response.json();
+            
+            // Backend returns: {message, traceId, data: {items, ...}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0 };
         } catch (error) {
             console.error(error);
-            return { items: [], totalItems: 0 }; // Return empty structure on error like getAllProducts
+            return { items: [], totalItems: 0 };
         }
     },
 
     getOrderById: async (id) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-order-by-id/${id}`, {
+            // Backend: GET /Orders/{id}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders/${id}`, {
                 method: 'GET',
                 showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch order');
-            return await response.json();
+            
+            // Backend returns: {message, traceId, data: {...}}
+            const result = await response.json();
+            return result.data || null;
         } catch (error) {
             console.error(error);
             return null;
@@ -181,20 +235,30 @@ const MerchantService = {
 
     updateOrderStatus: async (id, status) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/update-order-status/${id}`, {
+            // Backend: PUT /Orders/{id}/status with JSON body {status: orderState}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Orders/${id}/status`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Status: status }),
+                body: JSON.stringify({ status: status }),
                 showSpinner: true
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to update order status');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to update order status');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to update order status');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -202,17 +266,17 @@ const MerchantService = {
 
     getPurchasedCustomers: async (pageNumber = 1, pageSize = 10) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/get-purchased-customers`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ PageNumber: pageNumber, PageSize: pageSize }),
+            // Backend: GET /Customers?pageNumber={}&pageSize={} (merchant-only endpoint)
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Customers?pageNumber=${pageNumber}&pageSize=${pageSize}`, {
+                method: 'GET',
                 showSpinner: true
             });
 
             if (!response.ok) throw new Error('Failed to fetch customers');
-            return await response.json();
+            
+            // Backend returns: {message, traceId, data: {items, ...}}
+            const result = await response.json();
+            return result.data || { items: [], totalItems: 0 };
         } catch (error) {
             console.error(error);
             return { items: [], totalItems: 0 };
@@ -221,20 +285,30 @@ const MerchantService = {
 
     addProductCategories: async (productId, categories) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/add-categories/${productId}`, {
+            // Backend: PUT /Products/{id}/categories with JSON body {categories: [...]}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${productId}/categories`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Categories: categories }),
+                body: JSON.stringify({ categories: categories }),
                 showSpinner: true
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to add categories');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to add categories');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to add categories');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
@@ -242,20 +316,30 @@ const MerchantService = {
 
     removeProductCategories: async (productId, categories) => {
         try {
-            const response = await Authentication.fetchWithAuth(`${MERCHANT_API_URL}/remove-categories/${productId}`, {
-                method: 'PUT',
+            // Backend: DELETE /Products/{id}/categories with JSON body {categories: [...]}
+            const response = await Authentication.fetchWithAuth(`${CONFIG.API_BASE_URL}/Products/${productId}/categories`, {
+                method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({ Categories: categories }),
+                body: JSON.stringify({ categories: categories }),
                 showSpinner: true
             });
 
             if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(errorText || 'Failed to remove categories');
+                // Backend returns JSON error: {message, traceId}
+                try {
+                    const errorData = await response.json();
+                    throw new Error(errorData.message || 'Failed to remove categories');
+                } catch (parseError) {
+                    const errorText = await response.text();
+                    throw new Error(errorText || 'Failed to remove categories');
+                }
             }
-            return { success: true, message: await response.text() };
+            
+            // Backend returns: {message, traceId}
+            const result = await response.json();
+            return { success: true, message: result.message };
         } catch (error) {
             return { success: false, message: error.message };
         }
